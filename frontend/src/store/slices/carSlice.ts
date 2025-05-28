@@ -30,7 +30,7 @@ export const fetchListings = createAsyncThunk(
   'car/fetchListings',
   async (filters: CarListingFilters, { rejectWithValue }) => {
     try {
-      const response = await api.get<ListingsResponse>('/api/v1/car/listings', { 
+      const response = await api.get<ListingsResponse>('/car/listings', { 
         params: {
           ...filters,
           page: filters.page || 1,
@@ -48,7 +48,7 @@ export const triggerScrape = createAsyncThunk(
   'car/triggerScrape',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.post('/api/v1/car/scrape');
+      const response = await api.post('/car/scrape');
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to trigger scrape');

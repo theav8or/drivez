@@ -6,7 +6,7 @@ from app.schemas.car import CarListing
 from app.services.car import CarService
 from app.services.scraping import ScrapingService
 
-router = APIRouter()
+router = APIRouter(prefix="/car", tags=["car"])
 
 car_service = CarService()
 scraping_service = ScrapingService()

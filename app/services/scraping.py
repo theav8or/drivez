@@ -66,22 +66,28 @@ class ScrapingService:
     async def _process_listing(self, db: Session, listing_data: Dict) -> Optional[CarListing]:
         """Process a single listing with sophisticated error handling"""
         try:
-            # Normalize the data
-            normalized_data = normalize_car_data(listing_data)
-            
+            # Normalize the data with the database session
+            normalized_data = await normalize_car_data(listing_data, db)
+            if not normalized_data:
+                logger.warning(f"Skipping invalid listing data: {listing_data}")
+                return None
+                
             # Check if listing already exists
             existing_listing = db.query(CarListing).filter_by(yad2_id=normalized_data['yad2_id']).first()
             
             if existing_listing:
                 # Update existing listing
                 for key, value in normalized_data.items():
-                    setattr(existing_listing, key, value)
+                    if key not in ['id', 'created_at', 'yad2_id']:  # Don't update these fields
+                        setattr(existing_listing, key, value)
                 existing_listing.last_scraped_at = datetime.utcnow()
+                db.add(existing_listing)
                 return existing_listing
             
             # Create new listing
             new_listing = CarListing(**normalized_data)
             new_listing.last_scraped_at = datetime.utcnow()
+            db.add(new_listing)
             return new_listing
             
         except Exception as e:

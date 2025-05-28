@@ -60,3 +60,17 @@ class CarListing(Base):
     
     brand = relationship("CarBrand", back_populates="listings")
     model = relationship("CarModel", back_populates="listings")
+    history = relationship("CarListingHistory", back_populates="listing", cascade="all, delete-orphan")
+
+
+class CarListingHistory(Base):
+    __tablename__ = "car_listing_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("car_listings.id"))
+    price = Column(Float)
+    mileage = Column(Integer)
+    status = Column(Enum(CarStatus))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    listing = relationship("CarListing", back_populates="history")

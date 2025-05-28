@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.api_v1.api import api_router
+from app.api.api_v1.api_new import api_router
 from app.db.session import engine
 from app.db.models.car import Base
 
@@ -10,7 +10,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Car Listing Aggregator API",
-    description="API for aggregating and normalizing car listings",
+    description="API for aggregating and normalizing car listings from Yad2",
     version="1.0.0",
     docs_url="/api/docs",
     openapi_url="/api/openapi.json"
@@ -38,3 +38,7 @@ async def startup_event():
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

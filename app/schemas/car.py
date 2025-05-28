@@ -36,17 +36,24 @@ class CarListingBase(BaseModel):
     title: str
     price: float
     mileage: Optional[int] = None
-    year: Optional[int] = None
-    location: Optional[str] = None
-    description: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    fuel_type: Optional[str] = None
+    transmission: Optional[str] = None
+    body_type: Optional[str] = None
+    color: Optional[str] = None
+    status: str = "active"
+    brand_id: int
+    model_id: int
+    last_scraped_at: Optional[datetime] = None
 
 class CarListingCreate(CarListingBase):
     pass
 
 class CarListing(CarListingBase):
     id: int
+    created_at: datetime
+    updated_at: datetime
+    brand: CarBrand
+    model: CarModel
 
     class Config:
         from_attributes = True
