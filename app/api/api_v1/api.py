@@ -1,10 +1,15 @@
 from fastapi import APIRouter, Depends
-from typing import List
-from app.db.models import CarListing
+from typing import List, Optional
+from app.db.models import CarListing as CarListingModel
+from app.schemas.car import CarListing
 from app.services.normalization import normalize_car_data
 from app.core.config import settings
 
 router = APIRouter()
+
+__all__ = ['router', 'api_router']
+
+api_router = router
 
 @router.get("/listings", response_model=List[CarListing])
 async def get_listings(
