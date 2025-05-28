@@ -1,6 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import type { PayloadAction } from '@reduxjs/toolkit';
 import { api } from '../../api/client';
 import type { CarListing, CarListingFilters } from '../../types/car';
+
+interface ListingsResponse {
+  items: CarListing[];
+  total: number;
+  page: number;
+  limit: number;
+}
 
 export interface CarState {
   listings: CarListing[];
@@ -20,9 +28,31 @@ const initialState: CarState = {
 
 export const fetchListings = createAsyncThunk(
   'car/fetchListings',
-  async (filters: CarListingFilters) => {
-    const response = await api.get('/listings', { params: filters });
-    return response.data;
+  async (filters: CarListingFilters, { rejectWithValue }) => {
+    try {
+      const response = await api.get<ListingsResponse>('/api/v1/car/listings', { 
+        params: {
+          ...filters,
+          page: filters.page || 1,
+          limit: filters.limit || 10,
+        } 
+      });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to fetch listings');
+    }
+  }
+);
+
+export const triggerScrape = createAsyncThunk(
+  'car/triggerScrape',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/api/v1/car/scrape');
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to trigger scrape');
+    }
   }
 );
 
@@ -30,8 +60,11 @@ export const carSlice = createSlice({
   name: 'car',
   initialState,
   reducers: {
-    setFilters: (state, action) => {
-      state.filters = action.payload;
+    setFilters: (state, action: PayloadAction<Partial<CarListingFilters>>) => {
+      state.filters = { ...state.filters, ...action.payload };
+    },
+    resetFilters: (state) => {
+      state.filters = {};
     },
   },
   extraReducers: (builder) => {
@@ -47,10 +80,21 @@ export const carSlice = createSlice({
       })
       .addCase(fetchListings.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Failed to fetch listings';
+        state.error = action.payload as string || 'Failed to fetch listings';
+      })
+      .addCase(triggerScrape.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(triggerScrape.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(triggerScrape.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string || 'Failed to trigger scrape';
       });
   },
 });
 
-export const { setFilters } = carSlice.actions;
+export const { setFilters, resetFilters } = carSlice.actions;
 export default carSlice.reducer;

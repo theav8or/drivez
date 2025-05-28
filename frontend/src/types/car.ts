@@ -23,6 +23,7 @@ export interface CarListing {
   location: string;
   description: string;
   url: string;
+  image?: string;
   created_at: string;
   updated_at: string;
 }
@@ -32,8 +33,8 @@ export interface CarListingFilters {
   model?: string;
   minPrice?: number;
   maxPrice?: number;
-  minYear?: number;
-  maxYear?: number;
+  yearFrom?: number;
+  yearTo?: number;
   location?: string;
   page?: number;
   limit?: number;

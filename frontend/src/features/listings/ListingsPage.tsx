@@ -1,114 +1,237 @@
-import React from 'react';
-import { useAppDispatch, useAppSelector } from '@/store';
-import type { RootState } from '@/store';
+import React, { useEffect, useCallback } from 'react';
+import { useAppDispatch, useAppSelector } from '../../store';
+import type { RootState } from '../../store';
 import {
   Box,
   Button,
   TextField,
-  FormControl,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Pagination,
+  Grid,
+  Card,
+  CardContent,
+  CardMedia,
+  CircularProgress,
+  Alert,
+  AlertTitle,
+  IconButton,
+  Tooltip,
   Typography,
+  Pagination,
 } from '@mui/material';
-import { fetchListings, setFilters } from '../../store/slices/carSlice';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import { 
+  fetchListings, 
+  setFilters, 
+  resetFilters, 
+  triggerScrape,
+} from '../../store/slices/carSlice';
 import type { CarListing, CarListingFilters } from '../../types/car';
+
+const ITEMS_PER_PAGE = 10;
 
 const ListingsPage: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { listings, loading, error, filters, total } = useAppSelector((state: RootState) => state.car);
+  const { listings, loading, error, filters, total } = useAppSelector(
+    (state: RootState) => state.car
+  );
+  
+  const page = filters.page || 1;
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
-  const handleFilterChange = (field: keyof CarListingFilters, value: any) => {
-    dispatch(setFilters({ ...filters, [field]: value }));
-    dispatch(fetchListings(filters));
+  const fetchData = useCallback(() => {
+    dispatch(fetchListings({ 
+      ...filters, 
+      page,
+      limit: ITEMS_PER_PAGE 
+    }));
+  }, [dispatch, filters, page]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
+    dispatch(setFilters({ ...filters, page: value }));
   };
 
-  return (
-    <Box>
-      <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-        <TextField
-          label="Brand"
-          value={filters.brand || ''}
-          onChange={(e) => handleFilterChange('brand', e.target.value)}
-          sx={{ width: '200px' }}
-        />
-        <TextField
-          label="Model"
-          value={filters.model || ''}
-          onChange={(e) => handleFilterChange('model', e.target.value)}
-          sx={{ width: '200px' }}
-        />
-        <TextField
-          label="Min Price"
-          type="number"
-          value={filters.minPrice || ''}
-          onChange={(e) => handleFilterChange('minPrice', Number(e.target.value))}
-          sx={{ width: '150px' }}
-        />
-        <TextField
-          label="Max Price"
-          type="number"
-          value={filters.maxPrice || ''}
-          onChange={(e) => handleFilterChange('maxPrice', Number(e.target.value))}
-          sx={{ width: '150px' }}
-        />
-        <Button
-          variant="outlined"
-          onClick={() => {
-            dispatch(setFilters({}));
-            dispatch(fetchListings({}));
-          }}
-          sx={{ width: '150px' }}
-        >
-          Clear Filters
-        </Button>
-      </Box>
+  const handleFilterChange = (field: keyof CarListingFilters, value: any) => {
+    dispatch(setFilters({ ...filters, [field]: value, page: 1 }));
+  };
 
-      {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
+  const handleResetFilters = () => {
+    dispatch(resetFilters());
+  };
+
+  const handleRefresh = () => {
+    fetchData();
+  };
+
+  const handleTriggerScrape = async () => {
+    try {
+      await dispatch(triggerScrape()).unwrap();
+      fetchData();
+    } catch (err) {
+      // Error is handled by the slice
+    }
+  };
+
+  if (loading && !listings.length) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h5" component="h1" sx={{ mb: 0, mr: 2 }}>
+              Car Listings
+            </Typography>
+            <Tooltip title="Refresh data">
+              <IconButton 
+                onClick={handleRefresh}
+                disabled={loading}
+                size="small"
+                sx={{ ml: 1 }}
+              >
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              <AlertTitle>Error</AlertTitle>
+              {error}
+            </Alert>
+          )}
+          
+          <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+            <TextField
+              label="Brand"
+              value={filters.brand || ''}
+              onChange={(e) => handleFilterChange('brand', e.target.value)}
+              sx={{ width: '200px' }}
+              size="small"
+            />
+            <TextField
+              label="Model"
+              value={filters.model || ''}
+              onChange={(e) => handleFilterChange('model', e.target.value)}
+              sx={{ width: '200px' }}
+              size="small"
+            />
+            <TextField
+              label="Min Price"
+              type="number"
+              value={filters.minPrice || ''}
+              onChange={(e) => handleFilterChange('minPrice', Number(e.target.value))}
+              sx={{ width: '150px' }}
+              size="small"
+            />
+            <TextField
+              label="Max Price"
+              type="number"
+              value={filters.maxPrice || ''}
+              onChange={(e) => handleFilterChange('maxPrice', Number(e.target.value))}
+              sx={{ width: '150px' }}
+              size="small"
+            />
+            <TextField
+              label="Year From"
+              type="number"
+              value={filters.yearFrom || ''}
+              onChange={(e) => handleFilterChange('yearFrom', Number(e.target.value))}
+              sx={{ width: '150px' }}
+              size="small"
+            />
+            <TextField
+              label="Year To"
+              type="number"
+              value={filters.yearTo || ''}
+              onChange={(e) => handleFilterChange('yearTo', Number(e.target.value))}
+              sx={{ width: '150px' }}
+              size="small"
+            />
+          </Box>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={handleResetFilters}
+              disabled={loading}
+            >
+              Reset Filters
+            </Button>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              onClick={handleTriggerScrape}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} /> : null}
+            >
+              Scrape New Data
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {listings.length > 0 ? (
+        <Grid container spacing={3}>
+          {listings.map((listing: CarListing) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={listing.id}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                {listing.image && (
+                  <CardMedia
+                    component="img"
+                    height="140"
+                    image={listing.image}
+                    alt={listing.title}
+                  />
+                )}
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Typography gutterBottom variant="h6" component="div">
+                    {listing.title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Year: {listing.year}
+                  </Typography>
+                  <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
+                    ${listing.price?.toLocaleString()}
+                  </Typography>
+                  {listing.mileage && (
+                    <Typography variant="body2" color="text.secondary">
+                      Mileage: {listing.mileage.toLocaleString()} km
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        <Box textAlign="center" py={4}>
+          <Typography variant="h6" color="textSecondary">
+            No listings found. Try adjusting your filters or scrape for new data.
+          </Typography>
+        </Box>
       )}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Title</TableCell>
-              <TableCell>Price</TableCell>
-              <TableCell>Year</TableCell>
-              <TableCell>Mileage</TableCell>
-              <TableCell>Location</TableCell>
-              <TableCell>Source</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {listings.map((listing: CarListing) => (
-              <TableRow key={listing.id}>
-                <TableCell>{listing.title}</TableCell>
-                <TableCell>{listing.price.toLocaleString()}</TableCell>
-                <TableCell>{listing.year}</TableCell>
-                <TableCell>{listing.mileage.toLocaleString()}</TableCell>
-                <TableCell>{listing.location}</TableCell>
-                <TableCell>{listing.source}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-        <Pagination
-          count={Math.ceil(total / (filters.limit || 10))}
-          page={filters.page || 1}
-          onChange={(_, page) => handleFilterChange('page', page)}
-        />
-      </Box>
+      {totalPages > 1 && (
+        <Box display="flex" justifyContent="center" mt={4} mb={2}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+            showFirstButton
+            showLastButton
+          />
+        </Box>
+      )}
     </Box>
   );
 };
