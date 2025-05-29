@@ -1,13 +1,11 @@
 from fastapi import APIRouter
-from .api_new import api_router
+from .api_new import router as api_router
 
-# This is the main router that will be imported by main.py
-# All API routes from api_new.py are included via the api_router
+# Create main router
+router = APIRouter()
 
-# You can also include other routers here if needed
-# from .endpoints import car, scraper
-# router.include_router(car.router, prefix="/cars", tags=["cars"])
-# router.include_router(scraper.router, prefix="/scraper", tags=["scraper"])
+# Include the existing API router with /car prefix
+router.include_router(api_router, prefix="/car", tags=["car"])
 
 # Export the router for main.py to import
-__all__ = ["api_router"]
+__all__ = ["router"]
