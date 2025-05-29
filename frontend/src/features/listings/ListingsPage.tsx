@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import type { RootState } from '../../store';
 import {
@@ -92,14 +92,16 @@ const ListingsPage: React.FC = () => {
               Car Listings
             </Typography>
             <Tooltip title="Refresh data">
-              <IconButton 
-                onClick={handleRefresh}
-                disabled={loading}
-                size="small"
-                sx={{ ml: 1 }}
-              >
-                <RefreshIcon />
-              </IconButton>
+              <span>
+                <IconButton 
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  size="small"
+                  sx={{ ml: 1 }}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </span>
             </Tooltip>
           </Box>
           
@@ -202,19 +204,21 @@ const ListingsPage: React.FC = () => {
                 width: '100%'
               }}
             >
-              <Card 
-                sx={{ 
-                  height: '100%', 
-                  display: 'flex', 
+              <Card
+                key={listing.id}
+                component={RouterLink}
+                to={`/listing/${listing.id}`}
+                sx={{
+                  height: '100%',
+                  display: 'flex',
                   flexDirection: 'column',
-                  cursor: 'pointer',
-                  transition: 'transform 0.2s',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  textDecoration: 'none',
                   '&:hover': {
                     transform: 'translateY(-4px)',
-                    boxShadow: 3,
-                  }
+                    boxShadow: 6,
+                  },
                 }}
-                onClick={() => navigate(`/listing/${listing.id}`)}
               >
                 {listing.image && (
                   <CardMedia
@@ -229,7 +233,7 @@ const ListingsPage: React.FC = () => {
                     {listing.title}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Year: {listing.year}
+                    שנת ייצור: {listing.year}
                   </Typography>
                   <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
                     {new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' }).format(listing.price)}
@@ -248,7 +252,7 @@ const ListingsPage: React.FC = () => {
                   )}
                   {listing.mileage && (
                     <Typography variant="body2" color="text.secondary">
-                      Mileage: {listing.mileage.toLocaleString()} km
+                      קילומטרז: {listing.mileage.toLocaleString('he-IL')} ק״מ
                     </Typography>
                   )}
                 </CardContent>

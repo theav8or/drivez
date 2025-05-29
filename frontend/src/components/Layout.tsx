@@ -39,7 +39,14 @@ const Layout: React.FC = () => {
 
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ 
+      flexGrow: 1,
+      direction: 'rtl',
+      textAlign: 'right',
+      '& *': {
+        fontFamily: 'Heebo, Arial, sans-serif !important',
+      },
+    }}>
       <AppBar 
         position="sticky" 
         elevation={0} 
@@ -131,7 +138,7 @@ const Layout: React.FC = () => {
               </Menu>
             </>
           ) : (
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, direction: 'rtl' }}>
               {menuItems.map((item) => (
                 <Button
                   key={item.name}
