@@ -49,13 +49,14 @@ class CarListing(Base):
     transmission = Column(String, nullable=True)
     body_type = Column(String, nullable=True)
     color = Column(String, nullable=True)
+    image_url = Column(String, nullable=True)  # URL to the main car image
     status = Column(Enum(CarStatus), default=CarStatus.ACTIVE)
     
     brand_id = Column(Integer, ForeignKey("car_brands.id"), nullable=False)
     model_id = Column(Integer, ForeignKey("car_models.id"), nullable=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     last_scraped_at = Column(DateTime(timezone=True), nullable=True)
     
     brand = relationship("CarBrand", back_populates="listings")

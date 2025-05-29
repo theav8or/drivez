@@ -29,3 +29,192 @@ AttributeError: 'Yad2Scraper' object has no attribute 'scrape_listings'
 2025-05-29 15:21:24,991 - app.scrapers.yad2_updated - INFO - Cleaning up resources...
 2025-05-29 15:21:25,065 - app.scrapers.yad2_updated - INFO - Cleanup complete
 2025-05-29 15:21:25,065 - __main__ - WARNING - No listings found!
+2025-05-29 17:33:17,880 - __main__ - INFO - Starting Yad2 car listings scraper...
+2025-05-29 17:33:17,880 - __main__ - INFO - Starting to scrape all available car listings...
+2025-05-29 17:33:17,880 - app.scrapers.yad2_updated - INFO - Starting Yad2 scraper...
+2025-05-29 17:33:17,880 - app.scrapers.yad2_updated - INFO - Setting up browser...
+2025-05-29 17:33:19,594 - app.scrapers.yad2_updated - ERROR - Error setting up browser: Unknown permission: cookies
+Traceback (most recent call last):
+  File "/Users/user/Documents/repos/windauto/app/scrapers/yad2_updated.py", line 321, in _setup_browser
+    await self.context.grant_permissions(['geolocation', 'cookies', 'storage'])
+  File "/Users/user/Library/Python/3.9/lib/python/site-packages/playwright/async_api/_generated.py", line 12362, in grant_permissions
+    await self._impl_obj.grant_permissions(
+  File "/Users/user/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_browser_context.py", line 311, in grant_permissions
+    await self._channel.send("grantPermissions", locals_to_params(locals()))
+  File "/Users/user/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_connection.py", line 59, in send
+    return await self._connection.wrap_api_call(
+  File "/Users/user/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_connection.py", line 509, in wrap_api_call
+    return await cb()
+  File "/Users/user/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_connection.py", line 97, in inner_send
+    result = next(iter(done)).result()
+playwright._impl._errors.Error: Unknown permission: cookies
+2025-05-29 17:33:19,676 - app.scrapers.yad2_updated - ERROR - Error during scraping: Unknown permission: cookies
+Traceback (most recent call last):
+  File "/Users/user/Documents/repos/windauto/app/scrapers/yad2_updated.py", line 1218, in scrape
+    self.browser, self.context, self.page = await self._setup_browser()
+  File "/Users/user/Documents/repos/windauto/app/scrapers/yad2_updated.py", line 321, in _setup_browser
+    await self.context.grant_permissions(['geolocation', 'cookies', 'storage'])
+  File "/Users/user/Library/Python/3.9/lib/python/site-packages/playwright/async_api/_generated.py", line 12362, in grant_permissions
+    await self._impl_obj.grant_permissions(
+  File "/Users/user/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_browser_context.py", line 311, in grant_permissions
+    await self._channel.send("grantPermissions", locals_to_params(locals()))
+  File "/Users/user/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_connection.py", line 59, in send
+    return await self._connection.wrap_api_call(
+  File "/Users/user/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_connection.py", line 509, in wrap_api_call
+    return await cb()
+  File "/Users/user/Library/Python/3.9/lib/python/site-packages/playwright/_impl/_connection.py", line 97, in inner_send
+    result = next(iter(done)).result()
+playwright._impl._errors.Error: Unknown permission: cookies
+2025-05-29 17:33:19,676 - app.scrapers.yad2_updated - INFO - Cleaning up resources...
+2025-05-29 17:33:19,676 - app.scrapers.yad2_updated - INFO - Cleanup complete
+2025-05-29 17:33:19,677 - __main__ - WARNING - No listings found!
+2025-05-29 17:33:35,347 - __main__ - INFO - Starting Yad2 car listings scraper...
+2025-05-29 17:33:35,347 - __main__ - INFO - Starting to scrape all available car listings...
+2025-05-29 17:33:35,347 - app.scrapers.yad2_updated - INFO - Starting Yad2 scraper...
+2025-05-29 17:33:35,347 - app.scrapers.yad2_updated - INFO - Setting up browser...
+2025-05-29 17:33:37,759 - app.scrapers.yad2_updated - INFO - Browser setup complete
+2025-05-29 17:33:37,760 - app.scrapers.yad2_updated - INFO - Using search parameters: {}
+2025-05-29 17:33:37,760 - app.scrapers.yad2_updated - INFO - Built search URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 17:33:37,760 - app.scrapers.yad2_updated - INFO - Navigating to search page...
+2025-05-29 17:33:37,760 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 1/3)
+2025-05-29 17:33:40,903 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:33:48,523 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 2/3)
+2025-05-29 17:33:51,302 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:33:59,852 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 3/3)
+2025-05-29 17:34:02,961 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:34:13,229 - app.scrapers.yad2_updated - ERROR - Max retries (3) exceeded for URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 17:34:13,230 - app.scrapers.yad2_updated - ERROR - Failed to navigate to the search page
+2025-05-29 17:34:13,230 - app.scrapers.yad2_updated - INFO - Cleaning up resources...
+2025-05-29 17:34:13,279 - app.scrapers.yad2_updated - INFO - Cleanup complete
+2025-05-29 17:34:13,280 - __main__ - WARNING - No listings found!
+2025-05-29 17:35:07,404 - __main__ - INFO - Starting Yad2 car listings scraper...
+2025-05-29 17:35:07,404 - __main__ - INFO - Starting to scrape all available car listings...
+2025-05-29 17:35:07,405 - app.scrapers.yad2_updated - INFO - Starting Yad2 scraper...
+2025-05-29 17:35:07,405 - app.scrapers.yad2_updated - INFO - Setting up browser...
+2025-05-29 17:35:10,568 - app.scrapers.yad2_updated - INFO - Browser setup complete
+2025-05-29 17:35:10,568 - app.scrapers.yad2_updated - INFO - Using search parameters: {}
+2025-05-29 17:35:10,568 - app.scrapers.yad2_updated - INFO - Built search URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 17:35:10,569 - app.scrapers.yad2_updated - INFO - Navigating to search page...
+2025-05-29 17:35:10,569 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 1/3)
+2025-05-29 17:35:13,319 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:35:18,865 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 2/3)
+2025-05-29 17:35:20,485 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:35:29,944 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 3/3)
+2025-05-29 17:35:31,841 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:35:41,903 - app.scrapers.yad2_updated - ERROR - Max retries (3) exceeded for URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 17:35:41,903 - app.scrapers.yad2_updated - ERROR - Failed to navigate to the search page
+2025-05-29 17:35:41,903 - app.scrapers.yad2_updated - INFO - Cleaning up resources...
+2025-05-29 17:35:41,985 - app.scrapers.yad2_updated - INFO - Cleanup complete
+2025-05-29 17:35:41,986 - __main__ - WARNING - No listings found!
+2025-05-29 17:38:25,047 - __main__ - INFO - Starting Yad2 car listings scraper...
+2025-05-29 17:38:25,047 - __main__ - INFO - Starting to scrape all available car listings...
+2025-05-29 17:38:25,047 - app.scrapers.yad2_updated - INFO - Starting Yad2 scraper...
+2025-05-29 17:38:25,047 - app.scrapers.yad2_updated - INFO - Setting up browser...
+2025-05-29 17:38:26,853 - app.scrapers.yad2_updated - INFO - Browser setup complete
+2025-05-29 17:38:26,854 - app.scrapers.yad2_updated - INFO - Using search parameters: {}
+2025-05-29 17:38:26,854 - app.scrapers.yad2_updated - INFO - Built search URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 17:38:26,854 - app.scrapers.yad2_updated - INFO - Navigating to search page...
+2025-05-29 17:38:26,854 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 1/3)
+2025-05-29 17:38:29,750 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:38:35,907 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 2/3)
+2025-05-29 17:38:37,571 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:38:45,648 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 3/3)
+2025-05-29 17:38:47,198 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:38:55,112 - app.scrapers.yad2_updated - ERROR - Max retries (3) exceeded for URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 17:38:55,112 - app.scrapers.yad2_updated - ERROR - Failed to navigate to the search page
+2025-05-29 17:38:55,112 - app.scrapers.yad2_updated - INFO - Cleaning up resources...
+2025-05-29 17:38:55,191 - app.scrapers.yad2_updated - INFO - Cleanup complete
+2025-05-29 17:38:55,191 - __main__ - WARNING - No listings found!
+2025-05-29 17:41:29,723 - __main__ - INFO - Starting Yad2 car listings scraper...
+2025-05-29 17:41:29,723 - __main__ - INFO - Starting to scrape all available car listings...
+2025-05-29 17:41:29,723 - app.scrapers.yad2_updated - INFO - Starting Yad2 scraper...
+2025-05-29 17:41:29,723 - app.scrapers.yad2_updated - INFO - Setting up browser...
+2025-05-29 17:41:33,155 - app.scrapers.yad2_updated - INFO - Browser setup complete
+2025-05-29 17:41:33,156 - app.scrapers.yad2_updated - INFO - Using search parameters: {}
+2025-05-29 17:41:33,156 - app.scrapers.yad2_updated - INFO - Built search URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 17:41:33,156 - app.scrapers.yad2_updated - INFO - Navigating to search page...
+2025-05-29 17:41:33,156 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 1/3)
+2025-05-29 17:41:36,476 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:41:42,148 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 2/3)
+2025-05-29 17:41:45,409 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:41:54,678 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 3/3)
+2025-05-29 17:41:57,112 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:42:05,193 - app.scrapers.yad2_updated - ERROR - Max retries (3) exceeded for URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 17:42:05,194 - app.scrapers.yad2_updated - ERROR - Failed to navigate to the search page
+2025-05-29 17:42:05,194 - app.scrapers.yad2_updated - INFO - Cleaning up resources...
+2025-05-29 17:42:05,256 - app.scrapers.yad2_updated - INFO - Cleanup complete
+2025-05-29 17:42:05,256 - __main__ - WARNING - No listings found!
+2025-05-29 17:43:44,012 - __main__ - INFO - Starting Yad2 car listings scraper...
+2025-05-29 17:43:44,012 - __main__ - INFO - Starting to scrape all available car listings...
+2025-05-29 17:43:44,012 - app.scrapers.yad2_updated - INFO - Starting Yad2 scraper...
+2025-05-29 17:43:44,012 - app.scrapers.yad2_updated - INFO - Setting up browser...
+2025-05-29 17:43:48,129 - app.scrapers.yad2_updated - INFO - Browser setup complete
+2025-05-29 17:43:48,130 - app.scrapers.yad2_updated - INFO - Using search parameters: {}
+2025-05-29 17:43:48,130 - app.scrapers.yad2_updated - INFO - Built search URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 17:43:48,130 - app.scrapers.yad2_updated - INFO - Navigating to search page...
+2025-05-29 17:43:48,130 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 1/3)
+2025-05-29 17:43:50,391 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:44:00,062 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 2/3)
+2025-05-29 17:44:02,962 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:44:13,902 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 3/3)
+2025-05-29 17:44:16,779 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: DOMException: Failed to read the 'localStorage' property from 'Window': Access is denied for this document.
+    at eval (eval at evaluate (:226:30), <anonymous>:2:17)
+    at UtilityScript.evaluate (<anonymous>:233:19)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+2025-05-29 17:44:22,965 - app.scrapers.yad2_updated - ERROR - Max retries (3) exceeded for URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 17:44:22,965 - app.scrapers.yad2_updated - ERROR - Failed to navigate to the search page
+2025-05-29 17:44:22,965 - app.scrapers.yad2_updated - INFO - Cleaning up resources...
+2025-05-29 17:44:23,365 - app.scrapers.yad2_updated - INFO - Cleanup complete
+2025-05-29 17:44:23,365 - __main__ - WARNING - No listings found!
+2025-05-29 17:47:26,792 - __main__ - INFO - Starting Yad2 car listings scraper...
+2025-05-29 17:47:26,793 - __main__ - INFO - Search parameters: {}
+2025-05-29 17:47:26,793 - __main__ - INFO - Starting to fetch car listings...
+2025-05-29 17:47:26,793 - app.scrapers.yad2_api_scraper - INFO - Fetching page 1 of results...
+2025-05-29 17:47:27,341 - app.scrapers.yad2_api_scraper - WARNING - Request failed (attempt 1/3): 404, message='Not Found', url=URL('https://www.yad2.co.il/api/vehicles/vehicles?category=5&forceLdLoad=true&page=1&compact-req=1')
+2025-05-29 17:47:30,244 - app.scrapers.yad2_api_scraper - WARNING - Request failed (attempt 2/3): 404, message='Not Found', url=URL('https://www.yad2.co.il/api/vehicles/vehicles?category=5&forceLdLoad=true&page=1&compact-req=1')
+2025-05-29 17:47:33,841 - app.scrapers.yad2_api_scraper - WARNING - Request failed (attempt 3/3): 404, message='Not Found', url=URL('https://www.yad2.co.il/api/vehicles/vehicles?category=5&forceLdLoad=true&page=1&compact-req=1')
+2025-05-29 17:47:33,841 - app.scrapers.yad2_api_scraper - ERROR - Max retries (3) exceeded for URL: https://www.yad2.co.il/api/vehicles/vehicles
+2025-05-29 17:47:33,841 - app.scrapers.yad2_api_scraper - WARNING - No data found in API response for page 1
+2025-05-29 17:47:33,842 - __main__ - WARNING - No listings found!

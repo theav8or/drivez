@@ -105,6 +105,75 @@ class Yad2Scraper:
         self.captcha_solved = False
         self.session_id = str(uuid.uuid4())
         
+        # Initialize User-Agent rotator
+        self.user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Safari/605.1.15',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0'
+        ]
+        
+        # Browser context settings - expanded with more options to avoid detection
+        self.browser_args = [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu',
+            '--disable-blink-features=AutomationControlled',
+            '--disable-web-security',
+            '--disable-site-isolation-trials',
+            '--disable-notifications',
+            '--disable-popup-blocking',
+            '--disable-extensions',
+            '--disable-translate',
+            '--disable-background-networking',
+            '--disable-sync',
+            '--metrics-recording-only',
+            '--mute-audio',
+            '--no-default-browser-check',
+            '--disable-client-side-phishing-detection',
+            '--disable-component-update',
+            '--disable-default-apps',
+            '--use-fake-ui-for-media-stream',
+            '--use-fake-device-for-media-stream',
+            '--disable-hang-monitor',
+            '--disable-ipc-flooding-protection',
+            '--disable-popup-blocking',
+            '--disable-prompt-on-repost',
+            '--disable-renderer-backgrounding',
+            '--force-color-profile=srgb',
+            '--metrics-recording-only',
+            '--no-first-run',
+            '--enable-automation',
+            '--password-store=basic',
+            '--use-mock-keychain',
+            '--no-service-autorun',
+            '--export-tagged-pdf',
+            '--disable-search-engine-choice-screen',
+            '--enable-use-zoom-for-dsf=false',
+            '--auto-open-devtools-for-tabs'
+        ]
+        
+        # Initialize headers
+        self.headers = {
+            'User-Agent': self._get_random_user_agent(),
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0'
+        }
+        
         # Initialize statistics
         self.stats = {
             'requests': 0,
@@ -116,6 +185,10 @@ class Yad2Scraper:
             'pages_processed': 0,
             'listings_extracted': 0
         }
+        
+    def _get_random_user_agent(self) -> str:
+        """Return a random user agent from the list."""
+        return random.choice(self.user_agents)
         
         # Browser context settings - expanded with more options to avoid detection
         self.browser_args = [
@@ -211,64 +284,217 @@ class Yad2Scraper:
         return base_delay * random.uniform(min_multiplier, max_multiplier)
 
     async def _setup_browser(self) -> Tuple[Browser, BrowserContext, Page]:
-        """Set up the Playwright browser, context, and page.
+        """Set up the Playwright browser, context, and page."""
+        logger.info("Launching browser...")
         
-        Returns:
-            Tuple containing (browser, context, page) objects
-        """
         try:
-            self.playwright = await async_playwright().start()
-            
-            # Launch browser with anti-detection settings
-            self.browser = await self.playwright.chromium.launch(
+            # Launch the browser with more aggressive stealth settings
+            playwright = await async_playwright().start()
+            self.browser = await playwright.chromium.launch(
                 headless=self.headless,
-                args=self.browser_args,
-                slow_mo=self.slow_mo,
-                chromium_sandbox=False,
-                handle_sigint=True,
-                handle_sigterm=True,
-                handle_sighup=True,
-                devtools=not self.headless
+                args=[
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-infobars',
+                    '--window-size=1920,1080',
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--single-process',
+                    '--disable-gpu',
+                    '--disable-web-security',
+                    '--allow-running-insecure-content',
+                    '--disable-site-isolation-trials',
+                    '--disable-browser-side-navigation',
+                    '--disable-client-side-phishing-detection',
+                    '--disable-hang-monitor',
+                    '--disable-popup-blocking',
+                    '--disable-sync',
+                    '--disable-translate',
+                    '--metrics-recording-only',
+                    '--no-default-browser-check',
+                    '--disable-default-apps',
+                    '--mute-audio',
+                    '--disable-notifications',
+                    '--disable-extensions',
+                    '--disable-component-extensions-with-background-pages',
+                    '--disable-ipc-flooding-protection',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-renderer-backgrounding',
+                    '--disable-features=IsolateOrigins,site-per-process,TranslateUI,BlinkGenPropertyTrees',
+                    '--disable-features=ImprovedCookieControls,LazyFrameLoading,GlobalMediaControls,DestroyProfileOnBrowserClose',
+                    '--enable-features=NetworkService,NetworkServiceInProcess',
+                    '--password-store=basic',
+                    '--use-mock-keychain',
+                    '--disable-breakpad',
+                    '--disable-component-update',
+                    '--disable-domain-reliability',
+                    '--disable-background-networking',
+                    '--disable-client-side-phishing-detection',
+                    '--disable-component-update',
+                    '--disable-default-apps',
+                    '--disable-dev-shm-usage',
+                    '--disable-hang-monitor',
+                    '--disable-ipc-flooding-protection',
+                    '--disable-popup-blocking',
+                    '--disable-prompt-on-repost',
+                    '--disable-sync',
+                    '--disable-web-resources',
+                    '--force-color-profile=srgb',
+                    '--metrics-recording-only',
+                    '--safebrowsing-disable-auto-update',
+                    '--enable-automation',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-renderer-backgrounding',
+                ]
             )
             
-            # Create a new browser context with custom viewport and locale
+            # Create a new context with viewport and locale settings
             self.context = await self.browser.new_context(
                 viewport={'width': 1920, 'height': 1080},
-                locale='en-US,en;q=0.9,he;q=0.8',
+                locale='he-IL',
                 timezone_id='Asia/Jerusalem',
-                user_agent=self.headers['User-Agent'],
+                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 bypass_csp=True,
-                ignore_https_errors=True,
                 java_script_enabled=True,
                 has_touch=False,
                 is_mobile=False,
-                reduced_motion='reduce',
+                device_scale_factor=1,
+                offline=False,
+                permissions=['geolocation'],
                 color_scheme='light',
-                permissions=['geolocation']
+                reduced_motion='no-preference',
+                forced_colors='none',
+                accept_downloads=True,
             )
             
-            # Grant permissions if needed
-            await self.context.grant_permissions(['geolocation'])
-            
-            # Add custom headers to all requests
-            await self.context.set_extra_http_headers(self.headers)
-            
-            # Block resources that aren't needed for scraping
-            await self.context.route('**/*', self._route_handler)
+            # Grant necessary permissions
+            await self.context.grant_permissions(['geolocation', 'notifications'])
             
             # Create a new page
             self.page = await self.context.new_page()
             
-            # Set viewport size
-            await self.page.set_viewport_size({"width": 1920, "height": 1080})
+            # Set a default timeout for page operations
+            self.page.set_default_timeout(60000)  # 60 seconds
             
-            # Set user agent
+            # Set up request interception to block unnecessary resources
+            await self.page.route('**/*', self._handle_route)
+            
+            # Set up console and error logging
+            self.page.on('console', self._handle_console)
+            self.page.on('pageerror', self._handle_page_error)
+            
+            # Add stealth.js to avoid detection
+            await self._add_stealth_js()
+            
+            # Set localStorage and sessionStorage
+            await self.page.goto('about:blank')
+            await self.page.evaluate("""() => {
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Set some common localStorage items
+                const items = {
+                    'consent': 'true',
+                    'cookieConsent': '1',
+                    'gdpr': '1',
+                    'gdpr_consent': '1',
+                    'privacy': 'accepted',
+                    'seen_cookie_policy': '1',
+                    'y2': '1',
+                    'y2_consent': '1',
+                    'y2_consent_marketing': '1',
+                    'y2_consent_statistics': '1',
+                    'y2_consent_preferences': '1',
+                    'y2_consent_necessary': '1',
+                    'y2_consent_functional': '1',
+                    'y2_consent_performance': '1',
+                    'y2_consent_advertisement': '1',
+                    'y2_consent_analytics': '1',
+                    'y2_consent_other': '1',
+                    'y2_consent_version': '1',
+                    'y2_consent_timestamp': Date.now().toString(),
+                };
+                
+                Object.entries(items).forEach(([key, value]) => {
+                    try {
+                        localStorage.setItem(key, value);
+                    } catch (e) {
+                        console.warn(`Failed to set localStorage item: ${key}`, e);
+                    }
+                });
+                
+                // Set document.cookie
+                document.cookie = 'cookieConsent=true; path=/; max-age=31536000; secure; samesite=lax';
+                document.cookie = 'gdpr=1; path=/; max-age=31536000; secure; samesite=lax';
+                document.cookie = 'privacy=accepted; path=/; max-age=31536000; secure; samesite=lax';
+                document.cookie = 'y2=1; path=/; max-age=31536000; secure; samesite=lax';
+                document.cookie = 'y2_consent=1; path=/; max-age=31536000; secure; samesite=lax';
+                
+                return {
+                    localStorage: Object.fromEntries(Object.entries(localStorage)),
+                    cookies: document.cookie,
+                    userAgent: navigator.userAgent,
+                    webdriver: navigator.webdriver,
+                    languages: navigator.languages,
+                    platform: navigator.platform,
+                    plugins: Array.from(navigator.plugins).map(p => ({
+                        name: p.name,
+                        filename: p.filename,
+                        description: p.description,
+                        length: p.length
+                    })),
+                    mimeTypes: Array.from(navigator.mimeTypes).map(mt => ({
+                        type: mt.type,
+                        suffixes: mt.suffixes,
+                        description: mt.description
+                    })),
+                    permissions: {},
+                    webGL: {
+                        vendor: (() => {
+                            try {
+                                const canvas = document.createElement('canvas');
+                                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                                return debugInfo ? {
+                                    vendor: gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL),
+                                    renderer: gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL)
+                                } : null;
+                            } catch (e) {
+                                return { error: e.message };
+                            }
+                        })()
+                    },
+                    screen: {
+                        width: window.screen.width,
+                        height: window.screen.height,
+                        availWidth: window.screen.availWidth,
+                        availHeight: window.screen.availHeight,
+                        colorDepth: window.screen.colorDepth,
+                        pixelDepth: window.screen.pixelDepth
+                    },
+                    window: {
+                        innerWidth: window.innerWidth,
+                        innerHeight: window.innerHeight,
+                        outerWidth: window.outerWidth,
+                        outerHeight: window.outerHeight,
+                        devicePixelRatio: window.devicePixelRatio,
+                        screenX: window.screenX,
+                        screenY: window.screenY
+                    }
+                };
+            }""")
+            
+            # Set a basic user agent
             await self.page.set_extra_http_headers({
-                'User-Agent': self.headers['User-Agent']
+                'User-Agent': self.headers['User-Agent'],
+                'Accept-Language': 'en-US,en;q=0.9,he;q=0.8',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
             })
-            
-            # Disable timeout for debugging
-            self.page.set_default_timeout(0)
             
             # Randomize viewport size slightly to avoid fingerprinting
             width = random.randint(1200, 1920)
@@ -278,6 +504,7 @@ class Yad2Scraper:
             # Add some random mouse movements to appear more human
             await self._simulate_human_behavior(self.page)
             
+            logger.info("Browser setup completed successfully")
             return self.browser, self.context, self.page
             
         except Exception as e:
@@ -945,6 +1172,97 @@ class Yad2Scraper:
             
         except Exception as e:
             logger.warning(f"Error parsing API listing: {str(e)}")
+            return None
+    
+    async def _extract_listing_data(self, item: ElementHandle) -> Optional[Dict]:
+        """Extract data from a single listing element with enhanced error handling and data extraction."""
+        try:
+            # Extract the basic information
+            title_elem = await item.query_selector('h3')
+            if not title_elem:
+                return None
+                
+            title = await title_elem.inner_text()
+            url = await item.get_attribute('href')
+            if not url:
+                return None
+                
+            # Make sure the URL is absolute
+            if not url.startswith('http'):
+                url = urljoin(self.base_url, url)
+                
+            # Skip if we've already processed this URL
+            if url in self.processed_urls:
+                return None
+                
+            self.processed_urls.add(url)
+            
+            # Extract price
+            price_elem = await item.query_selector('[data-testid="price"]')
+            price = await price_elem.inner_text() if price_elem else '0'
+            price = float(price.replace(',', '').replace('₪', '').strip() or '0')
+            
+            # Extract year and mileage
+            year = None
+            mileage = None
+            info_elem = await item.query_selector('.listing-row-right')
+            if info_elem:
+                info_text = await info_elem.inner_text()
+                # Extract year (first 4-digit number)
+                year_match = re.search(r'(\d{4})', info_text)
+                if year_match:
+                    year = int(year_match.group(1))
+                # Extract mileage (number with , or . followed by km)
+                mileage_match = re.search(r'([\d,]+)\s*ק"מ', info_text)
+                if mileage_match:
+                    mileage = int(mileage_match.group(1).replace(',', ''))
+            
+            # Extract location
+            location_elem = await item.query_selector('[data-testid="location"]')
+            location = await location_elem.inner_text() if location_elem else ''
+            
+            # Extract image URL
+            image_url = None
+            image_elem = await item.query_selector('img')
+            if image_elem:
+                image_url = await image_elem.get_attribute('src')
+                if image_url and 'data:image' not in image_url:  # Skip data URIs
+                    if not image_url.startswith('http'):
+                        image_url = urljoin(self.base_url, image_url)
+                else:
+                    image_url = None
+            
+            # Extract additional details
+            details = {}
+            detail_elems = await item.query_selector_all('.listing-row-right > div')
+            for elem in detail_elems:
+                text = await elem.inner_text()
+                if 'דיזל' in text or 'בנזין' in text or 'היברידי' in text or 'חשמלי' in text:
+                    details['fuel_type'] = text.strip()
+                elif 'אוטומט' in text or 'ידני' in text:
+                    details['transmission'] = text.strip()
+                elif 'צבע' in text:
+                    details['color'] = text.replace('צבע', '').strip()
+                elif 'סוג רכב' in text:
+                    details['body_type'] = text.replace('סוג רכב', '').strip()
+            
+            # Create the listing data
+            listing_data = {
+                'yad2_id': url.split('/')[-1],
+                'title': title.strip(),
+                'price': price,
+                'year': year,
+                'mileage': mileage,
+                'location': location.strip(),
+                'url': url,
+                'image_url': image_url,
+                **details
+            }
+            
+            return listing_data
+            
+        except Exception as e:
+            logging.error(f"Error extracting listing data: {str(e)}")
             return None
     
     async def _get_next_page_url(self, page: Page, current_page: int) -> Optional[str]:
