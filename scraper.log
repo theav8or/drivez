@@ -3,3 +3,29 @@
 2025-05-28 22:30:14,139 - app.scrapers.yad2 - INFO - Scraping page 1/100: https://www.yad2.co.il/vehicles/cars
 2025-05-28 22:30:28,514 - app.scrapers.yad2 - WARNING - No listings found on page 1, stopping pagination
 2025-05-28 22:30:28,772 - __main__ - WARNING - No listings found!
+2025-05-29 15:20:29,317 - __main__ - INFO - Starting Yad2 car listings scraper...
+2025-05-29 15:20:29,317 - __main__ - INFO - Starting to scrape all available car listings...
+2025-05-29 15:20:29,317 - __main__ - ERROR - Scraping failed: 'Yad2Scraper' object has no attribute 'scrape_listings'
+Traceback (most recent call last):
+  File "/Users/user/Documents/repos/windauto/run_scraper.py", line 72, in main
+    listings = await scraper.scrape_listings()
+AttributeError: 'Yad2Scraper' object has no attribute 'scrape_listings'
+2025-05-29 15:20:57,045 - __main__ - INFO - Starting Yad2 car listings scraper...
+2025-05-29 15:20:57,046 - __main__ - INFO - Starting to scrape all available car listings...
+2025-05-29 15:20:57,046 - app.scrapers.yad2_updated - INFO - Starting Yad2 scraper...
+2025-05-29 15:20:57,046 - app.scrapers.yad2_updated - INFO - Setting up browser...
+2025-05-29 15:21:00,952 - app.scrapers.yad2_updated - INFO - Browser setup complete
+2025-05-29 15:21:00,952 - app.scrapers.yad2_updated - INFO - Using search parameters: {}
+2025-05-29 15:21:00,952 - app.scrapers.yad2_updated - INFO - Built search URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 15:21:00,952 - app.scrapers.yad2_updated - INFO - Navigating to search page...
+2025-05-29 15:21:00,953 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 1/3)
+2025-05-29 15:21:03,246 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: 'Yad2Scraper' object has no attribute '_get_random_user_agent'
+2025-05-29 15:21:09,740 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 2/3)
+2025-05-29 15:21:11,734 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: 'Yad2Scraper' object has no attribute '_get_random_user_agent'
+2025-05-29 15:21:16,764 - app.scrapers.yad2_updated - INFO - Navigating to: https://www.yad2.co.il/vehicles/cars (attempt 3/3)
+2025-05-29 15:21:19,364 - app.scrapers.yad2_updated - ERROR - Error navigating to https://www.yad2.co.il/vehicles/cars: 'Yad2Scraper' object has no attribute '_get_random_user_agent'
+2025-05-29 15:21:24,991 - app.scrapers.yad2_updated - ERROR - Max retries (3) exceeded for URL: https://www.yad2.co.il/vehicles/cars
+2025-05-29 15:21:24,991 - app.scrapers.yad2_updated - ERROR - Failed to navigate to the search page
+2025-05-29 15:21:24,991 - app.scrapers.yad2_updated - INFO - Cleaning up resources...
+2025-05-29 15:21:25,065 - app.scrapers.yad2_updated - INFO - Cleanup complete
+2025-05-29 15:21:25,065 - __main__ - WARNING - No listings found!

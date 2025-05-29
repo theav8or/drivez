@@ -4,7 +4,7 @@ Script to run the Yad2 car listings scraper and save results to the database.
 """
 import asyncio
 import logging
-from app.scrapers.yad2 import Yad2Scraper
+from app.scrapers.yad2_updated import Yad2Scraper
 from app.db.session import SessionLocal
 from app.db.models.car import CarListing
 from datetime import datetime
@@ -69,7 +69,7 @@ async def main():
         
         # Scrape all available listings
         logger.info("Starting to scrape all available car listings...")
-        listings = await scraper.scrape_listings()
+        listings = await scraper.scrape()
         
         if not listings:
             logger.warning("No listings found!")

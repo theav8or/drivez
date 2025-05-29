@@ -64,11 +64,11 @@ async def get_listings(
     return [
         CarListing(
             id=listing.id,
-            source=listing.source,
-            source_id=listing.source_id,
-            url=listing.url,
+            yad2_id=listing.yad2_id,
             title=listing.title,
+            description=listing.description,
             price=listing.price,
+            year=listing.year,
             mileage=listing.mileage,
             fuel_type=listing.fuel_type,
             transmission=listing.transmission,

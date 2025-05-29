@@ -30,11 +30,11 @@ class CarModel(CarModelBase):
         from_attributes = True
 
 class CarListingBase(BaseModel):
-    source: str
-    source_id: str
-    url: str
+    yad2_id: str
     title: str
+    description: Optional[str] = None
     price: float
+    year: int
     mileage: Optional[int] = None
     fuel_type: Optional[str] = None
     transmission: Optional[str] = None
