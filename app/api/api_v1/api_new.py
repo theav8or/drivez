@@ -1,4 +1,13 @@
+from typing import List, Dict, Optional
+from fastapi import Depends, APIRouter
+from sqlalchemy.orm import Session
 
+from app.db.session import SessionLocal
+from app.models.car_listing import CarListing
+from app.models.car_listing_model import CarListing as CarListingModel
+
+# Create router
+router = APIRouter()
 
 # Dependency to get DB session
 def get_db():
