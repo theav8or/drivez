@@ -3,11 +3,8 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { api } from '../../api/client';
 import type { CarListing, CarListingFilters } from '../../types/car';
 
-interface ListingsResponse {
-  items: CarListing[];
-  total: number;
-  page: number;
-  limit: number;
+interface ListingsResponse extends Array<CarListing> {
+  // The API returns an array of CarListing directly
 }
 
 export interface CarState {
@@ -30,7 +27,7 @@ export const fetchListings = createAsyncThunk(
   'car/fetchListings',
   async (filters: CarListingFilters, { rejectWithValue }) => {
     try {
-      const response = await api.get<ListingsResponse>('/car/listings', { 
+      const response = await api.get<CarListing[]>('/car/listings', { 
         params: {
           ...filters,
           page: filters.page || 1,
@@ -75,8 +72,8 @@ export const carSlice = createSlice({
       })
       .addCase(fetchListings.fulfilled, (state, action) => {
         state.loading = false;
-        state.listings = action.payload.items;
-        state.total = action.payload.total;
+        state.listings = action.payload;
+        state.total = action.payload.length;
       })
       .addCase(fetchListings.rejected, (state, action) => {
         state.loading = false;
