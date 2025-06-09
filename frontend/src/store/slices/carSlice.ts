@@ -29,7 +29,7 @@ export const fetchListings = createAsyncThunk(
   'car/fetchListings',
   async (filters: CarListingFilters, { rejectWithValue }) => {
     try {
-      const response = await api.get<CarListing[]>('/car/listings', { 
+      const response = await api.get<CarListing[]>('/listings', { 
         params: {
           ...filters,
           page: filters.page || 1,
@@ -47,13 +47,11 @@ export const fetchListingById = createAsyncThunk(
   'car/fetchListingById',
   async (id: number, { rejectWithValue }) => {
     try {
-      const response = await api.get<CarListing[]>(`/car/listings`, {
-        params: { id }
-      });
-      if (!response.data || response.data.length === 0) {
+      const response = await api.get<CarListing>(`/listings/${id}`);
+      if (!response.data) {
         throw new Error('Listing not found');
       }
-      return response.data[0];
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch listing');
     }
@@ -62,12 +60,24 @@ export const fetchListingById = createAsyncThunk(
 
 export const triggerScrape = createAsyncThunk(
   'car/triggerScrape',
-  async (_, { rejectWithValue }) => {
+  async (maxPages: number = 5, { rejectWithValue }) => {
     try {
-      const response = await api.post('/car/scrape');
+      const response = await api.post('/scrape/yad2', { max_pages: maxPages });
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to trigger scrape');
+    }
+  }
+);
+
+export const checkScrapeStatus = createAsyncThunk(
+  'car/checkScrapeStatus',
+  async (taskId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/scrape/status/${taskId}`);
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to check scrape status');
     }
   }
 );
@@ -101,6 +111,17 @@ export const carSlice = createSlice({
       })
       .addCase(fetchListings.rejected, (state, action) => {
         state.loading = false;
+      })
+      // Handle scrape status checks
+      .addCase(checkScrapeStatus.fulfilled, (state, action) => {
+        // Update UI based on scrape status if needed
+        if (action.payload.status === 'completed' && action.payload.result) {
+          // Optionally refresh listings after successful scrape
+          state.loading = false;
+        } else if (action.payload.status === 'error') {
+          state.error = action.payload.error || 'Scraping failed';
+          state.loading = false;
+        }
         state.error = action.payload as string;
       })
       .addCase(fetchListingById.pending, (state) => {
@@ -118,17 +139,18 @@ export const carSlice = createSlice({
         state.error = action.payload as string;
         state.currentListing = null;
       })
+      // Handle scrape triggers - single set of handlers
       .addCase(triggerScrape.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(triggerScrape.fulfilled, (state) => {
+      .addCase(triggerScrape.fulfilled, (state, action) => {
         state.loading = false;
         state.error = null;
       })
       .addCase(triggerScrape.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = action.payload as string || 'Failed to trigger scrape';
       });
   },
 });

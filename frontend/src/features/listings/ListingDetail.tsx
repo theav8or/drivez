@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
+import { useI18n } from '../../i18n/I18nProvider';
 import { 
   fetchListingById, 
   selectCurrentListing, 
@@ -23,10 +24,8 @@ import {
   AlertTitle,
   Container,
   Grid,
-  Divider,
   CardMedia,
-  Chip,
-  Stack,
+  Chip
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
@@ -38,6 +37,7 @@ const ListingDetail: React.FC = () => {
   const currentListing = useAppSelector(selectCurrentListing);
   const loading = useAppSelector(selectCarLoading);
   const error = useAppSelector(selectCarError);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (id) {
@@ -60,8 +60,8 @@ const ListingDetail: React.FC = () => {
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ m: 2 }}>
-        <AlertTitle>שגיאה</AlertTitle>
+      <Alert severity="error" sx={{ m: 2, textAlign: 'right' }}>
+        <AlertTitle>{t('error')}</AlertTitle>
         {error}
       </Alert>
     );
@@ -69,9 +69,9 @@ const ListingDetail: React.FC = () => {
 
   if (!currentListing) {
     return (
-      <Alert severity="warning" sx={{ m: 2 }}>
-        <AlertTitle>לא נמצאה מודעה</AlertTitle>
-        המודעה המבוקשת לא נמצאה
+      <Alert severity="warning" sx={{ m: 2, textAlign: 'right' }}>
+        <AlertTitle>{t('listingNotFound')}</AlertTitle>
+        {t('listingNotFoundMessage')}
       </Alert>
     );
   }
@@ -86,14 +86,39 @@ const ListingDetail: React.FC = () => {
     });
   };
 
+  const renderSpecification = (label: string, value: React.ReactNode, key?: string) => {
+    // Handle case where value is an object
+    const displayValue = value && typeof value === 'object' && !React.isValidElement(value)
+      ? JSON.stringify(value)
+      : value;
+      
+    return (
+      <TableRow key={key || label}>
+        <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>
+          {t(label)}
+        </TableCell>
+        <TableCell sx={{ textAlign: 'right' }}>{displayValue}</TableCell>
+      </TableRow>
+    );
+  };
+
+  const renderStatusChip = (status: string) => (
+    <Chip 
+      label={status === 'active' ? t('active') : t('inactive')}
+      color={status === 'active' ? 'success' : 'default'}
+      size="small"
+      sx={{ mr: 1 }}
+    />
+  );
+
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4, direction: 'rtl' }}>
       <Button
         startIcon={<ArrowBackIcon />}
         onClick={() => navigate(-1)}
-        sx={{ mb: 3 }}
+        sx={{ mb: 2 }}
       >
-        חזור לרשימה
+        {t('backToList')}
       </Button>
 
       <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
@@ -106,33 +131,25 @@ const ListingDetail: React.FC = () => {
                 height="400"
                 image={currentListing.image}
                 alt={currentListing.title}
-                sx={{
-                  borderRadius: 1,
-                  objectFit: 'cover',
-                  width: '100%',
-                }}
+                sx={{ borderRadius: 1, objectFit: 'cover' }}
               />
             ) : (
-              <Box
-                sx={{
-                  height: 400,
-                  bgcolor: 'grey.200',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 1,
-                }}
+              <Box 
+                height={400} 
+                display="flex" 
+                alignItems="center" 
+                justifyContent="center"
+                bgcolor="action.hover"
+                borderRadius={1}
               >
-                <Typography variant="body1" color="textSecondary">
-                  אין תמונה זמינה
-                </Typography>
+                <Typography color="text.secondary">{t('noImage')}</Typography>
               </Box>
             )}
           </Box>
 
           {/* Details Section */}
           <Box sx={{ width: { xs: '100%', md: '50%' } }}>
-            <Typography variant="h4" component="h1" gutterBottom>
+            <Typography variant="h4" component="h1" gutterBottom sx={{ textAlign: 'right' }}>
               {currentListing.title}
             </Typography>
             
@@ -144,80 +161,65 @@ const ListingDetail: React.FC = () => {
               }).format(currentListing.price)}
             </Typography>
 
-            <Divider sx={{ my: 3 }} />
-
-            <TableContainer component={Paper} variant="outlined">
+            <Typography variant="h5" gutterBottom sx={{ mt: 4, mb: 2, textAlign: 'right' }}>
+              {t('specifications')}
+            </Typography>
+            <TableContainer component={Paper} sx={{ mb: 4, direction: 'rtl' }}>
               <Table>
                 <TableBody>
+                  {currentListing.brand_name && (
+                    <TableRow>
+                      <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>{t('brand')}</TableCell>
+                      <TableCell sx={{ textAlign: 'right' }}>{currentListing.brand_name}</TableCell>
+                    </TableRow>
+                  )}
+                  {currentListing.model_name && (
+                    <TableRow>
+                      <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>{t('model')}</TableCell>
+                      <TableCell sx={{ textAlign: 'right' }}>{currentListing.model_name}</TableCell>
+                    </TableRow>
+                  )}
                   <TableRow>
-                    <TableCell component="th" scope="row">שנת ייצור</TableCell>
-                    <TableCell align="left">{currentListing.year}</TableCell>
+                    <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>{t('year')}</TableCell>
+                    <TableCell sx={{ textAlign: 'right' }}>{currentListing.year}</TableCell>
                   </TableRow>
-                  {currentListing.mileage && (
-                    <TableRow>
-                      <TableCell component="th" scope="row">קילומטרז</TableCell>
-                      <TableCell align="left">
-                        {currentListing.mileage.toLocaleString('he-IL')} ק"מ
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {currentListing.fuel_type && (
-                    <TableRow>
-                      <TableCell component="th" scope="row">סוג דלק</TableCell>
-                      <TableCell align="left">{currentListing.fuel_type}</TableCell>
-                    </TableRow>
-                  )}
-                  {currentListing.body_type && (
-                    <TableRow>
-                      <TableCell component="th" scope="row">סוג רכב</TableCell>
-                      <TableCell align="left">{currentListing.body_type}</TableCell>
-                    </TableRow>
-                  )}
+                  <TableRow>
+                    <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>{t('price')}</TableCell>
+                    <TableCell sx={{ textAlign: 'right' }}>₪{currentListing.price?.toLocaleString()}</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>{t('mileage')}</TableCell>
+                    <TableCell sx={{ textAlign: 'right' }}>{currentListing.mileage?.toLocaleString()} {t('km')}</TableCell>
+                  </TableRow>
                   {currentListing.transmission && (
                     <TableRow>
-                      <TableCell component="th" scope="row">תיבת הילוכים</TableCell>
-                      <TableCell align="left">{currentListing.transmission}</TableCell>
+                      <TableCell component="th" scope="row" sx={{ fontWeight: 'bold' }}>{t('transmission')}</TableCell>
+                      <TableCell sx={{ textAlign: 'right' }}>{t(currentListing.transmission.toLowerCase())}</TableCell>
                     </TableRow>
                   )}
-                  {currentListing.color && (
-                    <TableRow>
-                      <TableCell component="th" scope="row">צבע</TableCell>
-                      <TableCell align="left">
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <Box 
-                            sx={{
-                              width: 20,
-                              height: 20,
-                              bgcolor: currentListing.color.toLowerCase(),
-                              border: '1px solid #ccc',
-                              borderRadius: '50%',
-                            }}
-                          />
-                          <span>{currentListing.color}</span>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {currentListing.status && (
-                    <TableRow>
-                      <TableCell component="th" scope="row">סטטוס</TableCell>
-                      <TableCell align="left">
-                        <Chip 
-                          label={currentListing.status === 'active' ? 'פעיל' : 'לא פעיל'} 
-                          color={currentListing.status === 'active' ? 'success' : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {currentListing.last_scraped_at && (
-                    <TableRow>
-                      <TableCell component="th" scope="row">נמצא לאחרונה</TableCell>
-                      <TableCell align="left">
-                        {formatDate(currentListing.last_scraped_at)}
-                      </TableCell>
-                    </TableRow>
-                  )}
+                  {currentListing.fuel_type && 
+                    renderSpecification(
+                      'fuelType', 
+                      t(currentListing.fuel_type.toLowerCase())
+                    )
+                  }
+                  {currentListing.color && 
+                    renderSpecification('color', currentListing.color)
+                  }
+                  {currentListing.status && 
+                    renderSpecification(
+                      'status', 
+                      renderStatusChip(currentListing.status),
+                      'status-row'
+                    )
+                  }
+                  {currentListing.last_scraped_at && 
+                    renderSpecification(
+                      'lastScraped',
+                      formatDate(currentListing.last_scraped_at),
+                      'last-scraped'
+                    )
+                  }
                 </TableBody>
               </Table>
             </TableContainer>
@@ -228,7 +230,7 @@ const ListingDetail: React.FC = () => {
         {currentListing.description && (
           <Box sx={{ mt: 4 }}>
             <Typography variant="h6" gutterBottom>
-              תיאור הרכב
+              {t('carDescription')}
             </Typography>
             <Paper variant="outlined" sx={{ p: 3, whiteSpace: 'pre-line' }}>
               <Typography variant="body1">

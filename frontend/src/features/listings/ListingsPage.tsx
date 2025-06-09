@@ -1,7 +1,9 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import type { RootState } from '../../store';
+import { useI18n } from '../../i18n/I18nProvider';
+import { scraperApi, type ScrapeTask } from '../../api/scraper';
 import {
   Box,
   Button,
@@ -9,6 +11,7 @@ import {
   Card,
   CardContent,
   CardMedia,
+  CardActionArea,
   CircularProgress,
   Alert,
   AlertTitle,
@@ -16,8 +19,19 @@ import {
   Tooltip,
   Typography,
   Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  LinearProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material/Select';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import { 
   fetchListings, 
   setFilters, 
@@ -34,9 +48,113 @@ const ListingsPage: React.FC = () => {
   const { listings = [], loading, error, filters = {}, total = 0 } = useAppSelector(
     (state: RootState) => state.car
   );
+  const { t } = useI18n();
+  
+  const [scrapeDialogOpen, setScrapeDialogOpen] = useState(false);
+  const [scrapeProgress, setScrapeProgress] = useState(0);
+  const [scrapeStatus, setScrapeStatus] = useState<ScrapeTask | null>(null);
+  const [scrapeError, setScrapeError] = useState<string | null>(null);
+  const [maxPages, setMaxPages] = useState(5);
+  const [scrapePolling, setScrapePolling] = useState<ReturnType<typeof setInterval> | null>(null);
   
   const page = filters?.page || 1;
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE) || 1;
+  
+  // Handle filter changes
+  const onFilterChange = useCallback((field: keyof CarListingFilters, value: any) => {
+    dispatch(setFilters({ ...filters, [field]: value, page: 1 }));
+  }, [dispatch, filters]);
+
+  // Create individual input components to maintain focus
+  const InputField = React.memo(({ 
+    field, 
+    label, 
+    type = 'text', 
+    value = '',
+    disabled = false,
+    sx = {}
+  }: {
+    field: keyof CarListingFilters;
+    label: string;
+    type?: string;
+    value?: any;
+    disabled?: boolean;
+    sx?: object;
+  }) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = type === 'number' 
+        ? (e.target as HTMLInputElement).valueAsNumber || '' 
+        : e.target.value;
+      onFilterChange(field, newValue);
+    };
+
+    return (
+      <TextField
+        key={`${field}-input`}
+        label={label}
+        type={type}
+        value={value || ''}
+        onChange={handleChange}
+        disabled={disabled}
+        size="small"
+        sx={{
+          minWidth: 120,
+          '&:not(:last-child)': { mr: 1 },
+          ...sx
+        }}
+      />
+    );
+  });
+
+  // Memoize the filter inputs to prevent re-renders
+  const filterInputs = useMemo(() => (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+      <InputField 
+        field="brand" 
+        label={t('brand')} 
+        value={filters.brand}
+        disabled={loading}
+      />
+      <InputField 
+        field="model" 
+        label={t('model')} 
+        value={filters.model}
+        disabled={loading}
+      />
+      <InputField 
+        field="minPrice" 
+        label={t('minPrice')} 
+        type="number"
+        value={filters.minPrice}
+        disabled={loading}
+        sx={{ maxWidth: 140 }}
+      />
+      <InputField 
+        field="maxPrice" 
+        label={t('maxPrice')} 
+        type="number"
+        value={filters.maxPrice}
+        disabled={loading}
+        sx={{ maxWidth: 140 }}
+      />
+      <InputField 
+        field="yearFrom" 
+        label={t('minYear')} 
+        type="number"
+        value={filters.yearFrom}
+        disabled={loading}
+        sx={{ maxWidth: 120 }}
+      />
+      <InputField 
+        field="yearTo" 
+        label={t('maxYear')} 
+        type="number"
+        value={filters.yearTo}
+        disabled={loading}
+        sx={{ maxWidth: 120 }}
+      />
+    </Box>
+  ), [filters, loading, t, onFilterChange]);
 
   const fetchData = useCallback(() => {
     dispatch(fetchListings({ 
@@ -66,220 +184,345 @@ const ListingsPage: React.FC = () => {
     fetchData();
   };
 
+  // Poll for scrape status
+  const pollScrapeStatus = useCallback(async (taskId: string) => {
+    if (scrapePolling) {
+      clearInterval(scrapePolling);
+    }
+    
+    const poll = async () => {
+      try {
+        const status = await scraperApi.getStatus(taskId);
+        setScrapeStatus(status);
+        
+        // Update progress
+        if (status.details?.progress) {
+          setScrapeProgress(status.details.progress);
+        }
+        
+        // If task is done, stop polling
+        if (['completed', 'error', 'not_found'].includes(status.status)) {
+          if (scrapePolling) {
+            clearInterval(scrapePolling);
+            setScrapePolling(null);
+          }
+          
+          // Refresh listings if successful
+          if (status.status === 'completed' && status.result) {
+            dispatch(fetchListings(filters));
+          }
+        }
+      } catch (err) {
+        console.error('Error polling scrape status:', err);
+        setScrapeError('Failed to check scrape status');
+        if (scrapePolling) {
+          clearInterval(scrapePolling);
+          setScrapePolling(null);
+        }
+      }
+    };
+    
+    // Start polling every 2 seconds
+    const intervalId = setInterval(poll, 2000);
+    setScrapePolling(intervalId);
+    
+    // Initial poll
+    poll();
+    
+    return () => {
+      if (scrapePolling) {
+        clearInterval(scrapePolling);
+      }
+    };
+  }, [dispatch, filters, scrapePolling]);
+  
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (scrapePolling) {
+        clearInterval(scrapePolling);
+      }
+    };
+  }, [scrapePolling]);
+  
   const handleTriggerScrape = async () => {
     try {
-      await dispatch(triggerScrape()).unwrap();
-      fetchData();
+      setScrapeDialogOpen(true);
+      setScrapeProgress(0);
+      setScrapeStatus(null);
+      setScrapeError(null);
+      
+      // Start the scrape
+      const result = await scraperApi.startScraping(maxPages);
+      setScrapeStatus(result);
+      
+      // Start polling for status
+      if (result.task_id) {
+        pollScrapeStatus(result.task_id);
+      }
+      
     } catch (err) {
-      // Error is handled by the slice
+      setScrapeError(err instanceof Error ? err.message : 'Failed to start scraping');
+      setScrapeDialogOpen(false);
+    }
+  };
+  
+  const handleMaxPagesChange = (event: SelectChangeEvent<number>) => {
+    setMaxPages(Number(event.target.value));
+  };
+
+  const handleCloseScrapeDialog = () => {
+    setScrapeDialogOpen(false);
+    // Don't reset status if scraping is in progress
+    if (!scrapeStatus || ['completed', 'error', 'not_found'].includes(scrapeStatus.status)) {
+      setScrapeStatus(null);
+      setScrapeError(null);
+      setScrapeProgress(0);
     }
   };
 
-  if (loading && !listings.length) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
-    <Box sx={{ p: 3 }}>
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h5" component="h1" sx={{ mb: 0, mr: 2 }}>
-              Car Listings
-            </Typography>
-            <Tooltip title="Refresh data">
-              <span>
-                <IconButton 
-                  onClick={handleRefresh}
-                  disabled={loading}
-                  size="small"
-                  sx={{ ml: 1 }}
+    <Box sx={{ p: 3, direction: 'rtl' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h5" component="h2">
+          {t('listings')} ({total})
+        </Typography>
+        <Box>
+          <Tooltip title="Scrape new listings from Yad2">
+            <span>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleTriggerScrape}
+                disabled={loading || (scrapeStatus?.status === 'running')}
+                startIcon={<CloudDownloadIcon />}
+                sx={{ mr: 1 }}
+              >
+                {t('scrapeListings')}
+              </Button>
+            </span>
+          </Tooltip>
+          <Tooltip title="Refresh current listings">
+            <span>
+              <Button
+                variant="outlined"
+                onClick={handleRefresh}
+                disabled={loading}
+                startIcon={<RefreshIcon />}
+              >
+                {t('refresh')}
+              </Button>
+            </span>
+          </Tooltip>
+        </Box>
+      </Box>
+
+      {filterInputs}
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          <AlertTitle>Error</AlertTitle>
+          {error}
+        </Alert>
+      )}
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3, mb: 3 }}>
+            {listings.map((listing) => (
+              <Card key={listing.id} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardActionArea 
+                  component={RouterLink} 
+                  to={`/listings/${listing.id}`}
+                  sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}
                 >
-                  <RefreshIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
+                  {listing.thumbnail_url && (
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image={listing.thumbnail_url}
+                      alt={listing.title}
+                      sx={{ objectFit: 'cover' }}
+                    />
+                  )}
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography gutterBottom variant="h6" component="h3">
+                      {listing.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      {listing.year} • {listing.mileage?.toLocaleString()} km • {listing.fuel_type}
+                    </Typography>
+                    {listing.price && (
+                      <Typography variant="h6" color="primary" fontWeight="bold">
+                        {listing.price.toLocaleString()} ₪
+                      </Typography>
+                    )}
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            ))}
           </Box>
-          
-          {error && (
+
+          {totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <Pagination 
+                count={totalPages} 
+                page={page} 
+                onChange={handlePageChange} 
+                color="primary" 
+                showFirstButton 
+                showLastButton 
+              />
+            </Box>
+          )}
+        </>
+      )}
+
+      {/* Scrape Dialog */}
+      <Dialog open={scrapeDialogOpen} onClose={handleCloseScrapeDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Scraping Listings from Yad2</DialogTitle>
+        <DialogContent>
+          {scrapeError && (
             <Alert severity="error" sx={{ mb: 2 }}>
               <AlertTitle>Error</AlertTitle>
-              {error}
+              {scrapeError}
             </Alert>
           )}
           
-          <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
-            <TextField
-              label="Brand"
-              value={filters.brand || ''}
-              onChange={(e) => handleFilterChange('brand', e.target.value)}
-              sx={{ width: '200px' }}
-              size="small"
-            />
-            <TextField
-              label="Model"
-              value={filters.model || ''}
-              onChange={(e) => handleFilterChange('model', e.target.value)}
-              sx={{ width: '200px' }}
-              size="small"
-            />
-            <TextField
-              label="Min Price"
-              type="number"
-              value={filters.minPrice || ''}
-              onChange={(e) => handleFilterChange('minPrice', Number(e.target.value))}
-              sx={{ width: '150px' }}
-              size="small"
-            />
-            <TextField
-              label="Max Price"
-              type="number"
-              value={filters.maxPrice || ''}
-              onChange={(e) => handleFilterChange('maxPrice', Number(e.target.value))}
-              sx={{ width: '150px' }}
-              size="small"
-            />
-            <TextField
-              label="Year From"
-              type="number"
-              value={filters.yearFrom || ''}
-              onChange={(e) => handleFilterChange('yearFrom', Number(e.target.value))}
-              sx={{ width: '150px' }}
-              size="small"
-            />
-            <TextField
-              label="Year To"
-              type="number"
-              value={filters.yearTo || ''}
-              onChange={(e) => handleFilterChange('yearTo', Number(e.target.value))}
-              sx={{ width: '150px' }}
-              size="small"
-            />
-          </Box>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
-            <Button 
-              variant="outlined" 
-              onClick={handleResetFilters}
-              disabled={loading}
-            >
-              Reset Filters
-            </Button>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={handleTriggerScrape}
-              disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} /> : null}
-            >
-              Scrape New Data
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {listings.length > 0 ? (
-        <Box 
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, 1fr)',
-              md: 'repeat(3, 1fr)',
-              lg: 'repeat(4, 1fr)'
-            },
-            gap: 3,
-            width: '100%'
-          }}
-        >
-          {listings.map((listing: CarListing) => (
-            <Box 
-              key={listing.id}
-              sx={{ 
-                display: 'flex',
-                width: '100%'
-              }}
-            >
-              <Card
-                key={listing.id}
-                component={RouterLink}
-                to={`/listing/${listing.id}`}
-                sx={{
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  textDecoration: 'none',
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: 6,
-                  },
-                }}
-              >
-                {listing.image && (
-                  <CardMedia
-                    component="img"
-                    height="140"
-                    image={listing.image}
-                    alt={listing.title}
-                  />
-                )}
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography gutterBottom variant="h6" component="div">
-                    {listing.title}
+          {!scrapeStatus ? (
+            <Box sx={{ mt: 2 }}>
+              <FormControl fullWidth sx={{ mb: 3 }}>
+                <InputLabel id="max-pages-label">Max Pages to Scrape</InputLabel>
+                <Select
+                  labelId="max-pages-label"
+                  id="max-pages"
+                  value={maxPages}
+                  label="Max Pages to Scrape"
+                  onChange={handleMaxPagesChange}
+                  disabled={loading}
+                >
+                  {[1, 2, 3, 5, 10, 20, 50].map(num => (
+                    <MenuItem key={num} value={num}>
+                      {num} {num === 1 ? 'page' : 'pages'}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                This will scrape up to {maxPages} pages of listings from Yad2.
+              </Typography>
+              
+              <Typography variant="body2" color="text.secondary">
+                Note: Scraping may take a few minutes depending on the number of pages.
+              </Typography>
+            </Box>
+          ) : (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Status: <strong>{scrapeStatus.status.toUpperCase()}</strong>
+              </Typography>
+              
+              {scrapeStatus.details?.started_at && (
+                <Typography variant="body2" color="text.secondary">
+                  Started: {new Date(scrapeStatus.details.started_at).toLocaleString()}
+                </Typography>
+              )}
+              
+              {scrapeStatus.details?.max_pages && (
+                <Typography variant="body2" color="text.secondary">
+                  Pages to scrape: {scrapeStatus.details.max_pages}
+                </Typography>
+              )}
+              
+              {scrapeStatus.details?.message && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                  {scrapeStatus.details.message}
+                </Typography>
+              )}
+              
+              {scrapeStatus.result && (
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Results:
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                    <Typography variant="body2">
+                      Created: <strong>{scrapeStatus.result.created}</strong>
+                    </Typography>
+                    <Typography variant="body2">
+                      Updated: <strong>{scrapeStatus.result.updated}</strong>
+                    </Typography>
+                    <Typography variant="body2">
+                      Total: <strong>{scrapeStatus.result.total}</strong>
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+              
+              <Box sx={{ mt: 3, mb: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Progress
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    שנת ייצור: {listing.year}
+                    {scrapeProgress}%
                   </Typography>
-                  <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
-                    {new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' }).format(listing.price)}
-                  </Typography>
-                  {listing.description && (
-                    <Typography variant="body2" color="text.secondary" sx={{ 
-                      mt: 1, 
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis' 
-                    }}>
-                      {listing.description}
-                    </Typography>
-                  )}
-                  {listing.mileage && (
-                    <Typography variant="body2" color="text.secondary">
-                      קילומטרז: {listing.mileage.toLocaleString('he-IL')} ק״מ
-                    </Typography>
-                  )}
-                </CardContent>
-              </Card>
+                </Box>
+                <LinearProgress 
+                  variant={scrapeStatus.status === 'running' ? 'buffer' : 'determinate'} 
+                  value={scrapeProgress} 
+                  valueBuffer={scrapeStatus.status === 'running' ? 100 : undefined}
+                  sx={{ 
+                    height: 10, 
+                    borderRadius: 5,
+                    '& .MuiLinearProgress-bar': {
+                      borderRadius: 5,
+                    }
+                  }}
+                />
+              </Box>
+              
+              {scrapeStatus.status === 'completed' && (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  Scraping completed successfully!
+                </Alert>
+              )}
+              
+              {scrapeStatus.status === 'error' && scrapeStatus.error && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  <AlertTitle>Scraping Error</AlertTitle>
+                  {scrapeStatus.error}
+                </Alert>
+              )}
             </Box>
-          ))}
-        </Box>
-      ) : (
-        <Box textAlign="center" py={4}>
-          <Typography variant="h6" color="textSecondary">
-            No listings found. Try adjusting your filters or scrape for new data.
-          </Typography>
-        </Box>
-      )}
-
-      {totalPages > 1 && (
-        <Box display="flex" justifyContent="center" mt={4} mb={2}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={handlePageChange}
-            color="primary"
-            showFirstButton
-            showLastButton
-          />
-        </Box>
-      )}
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={handleCloseScrapeDialog}
+            disabled={scrapeStatus?.status === 'running'}
+            variant="outlined"
+            color="inherit"
+          >
+            {scrapeStatus?.status === 'completed' ? 'Done' : 'Cancel'}
+          </Button>
+          
+          {scrapeStatus?.status === 'completed' && (
+            <Button 
+              onClick={handleRefresh}
+              color="primary"
+              variant="contained"
+            >
+              View Updated Listings
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

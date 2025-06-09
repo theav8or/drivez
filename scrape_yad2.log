@@ -1,0 +1,15 @@
+2025-05-30 19:46:38,273 - __main__ - INFO - Starting Yad2 car listings scraper...
+2025-05-30 19:46:38,273 - __main__ - INFO - Fetching page: https://www.yad2.co.il/vehicles/cars
+2025-05-30 19:46:39,090 - __main__ - INFO - Extracted 40 listings from page
+2025-05-30 19:46:39,090 - __main__ - INFO - Processing listing 1/10
+2025-05-30 19:46:40,094 - __main__ - INFO - Processing listing 2/10
+2025-05-30 19:46:41,097 - __main__ - INFO - Processing listing 3/10
+2025-05-30 19:46:42,100 - __main__ - INFO - Processing listing 4/10
+2025-05-30 19:46:43,105 - __main__ - INFO - Processing listing 5/10
+2025-05-30 19:46:44,109 - __main__ - INFO - Processing listing 6/10
+2025-05-30 19:46:45,113 - __main__ - INFO - Processing listing 7/10
+2025-05-30 19:46:46,117 - __main__ - INFO - Processing listing 8/10
+2025-05-30 19:46:47,120 - __main__ - INFO - Processing listing 9/10
+2025-05-30 19:46:48,124 - __main__ - INFO - Processing listing 10/10
+2025-05-30 19:46:49,126 - __main__ - INFO - Successfully scraped 10 car listings.
+2025-05-30 19:46:49,127 - __main__ - INFO - Saved results to 'yad2_listings.json'

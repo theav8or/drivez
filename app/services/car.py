@@ -50,6 +50,24 @@ class CarService:
         listings = query.offset(skip).limit(limit).all()
         return listings
     
+    async def get_listing_by_id(self, db: Session, listing_id: int) -> Optional[CarListing]:
+        """
+        Retrieve a single car listing by ID.
+        
+        Args:
+            db: Database session
+            listing_id: ID of the listing to retrieve
+            
+        Returns:
+            The car listing if found, None otherwise
+        """
+        listing = db.query(CarListingModel).options(
+            joinedload(CarListingModel.brand),
+            joinedload(CarListingModel.model)
+        ).filter(CarListingModel.id == listing_id).first()
+        
+        return listing
+    
     async def get_filters(self, db: Session) -> Dict:
         """
         Get available filters for car listings.

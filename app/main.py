@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.api_v1.api import api_router
 from app.db.session import engine
 from app.db.models.car import Base
+
+# Import the correct router
+from app.api.api_v1.api_new import api_router
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -25,8 +27,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API router
-app.include_router(api_router, prefix="/api/v1")
+# Include API v1 router (prefix is already set in the router)
+from app.api.api_v1 import api_router as api_v1_router
+app.include_router(api_v1_router)
 
 @app.on_event("startup")
 async def startup_event():
@@ -38,3 +41,24 @@ async def startup_event():
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok"}
+
+# Debug endpoint to list all routes
+@app.get("/api/debug/routes")
+async def list_routes():
+    """List all registered routes."""
+    routes = []
+    for route in app.routes:
+        if hasattr(route, "methods"):
+            routes.append({
+                "path": route.path,
+                "name": route.name,
+                "methods": list(route.methods)
+            })
+    
+    # Debug: Print all routes to console
+    print("\n=== Registered Routes ===")
+    for route in routes:
+        print(f"{route['path']} - {route['methods']}")
+    print("======================\n")
+    
+    return {"routes": routes}

@@ -36,6 +36,19 @@ async def trigger_scrape(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/listings/{listing_id}", response_model=CarListing)
+async def get_listing(
+    listing_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get a single car listing by ID.
+    """
+    listing = await car_service.get_listing_by_id(db, listing_id)
+    if not listing:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    return listing
+
 @router.get("/filters", response_model=Dict)
 async def get_filters(
     db: Session = Depends(get_db)

@@ -1,13 +1,44 @@
 from typing import List, Dict, Optional
-from fastapi import Depends, APIRouter, HTTPException
+from pydantic import BaseModel
+from fastapi import Depends, APIRouter, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
 from app.db.models.car import CarListing as CarListingModel, CarBrand, CarModel
-from app.schemas.car import CarListing, CarBrand as CarBrandSchema, CarModel as CarModelSchema
+from .endpoints import scraper_v2
 
-# Create router
-router = APIRouter()
+# Response model for the listings endpoint
+class CarListingResponse(BaseModel):
+    id: int
+    title: str
+    price: Optional[float] = None
+    year: Optional[int] = None
+    mileage: Optional[int] = None
+    engine_volume: Optional[int] = None
+    color: Optional[str] = None
+    city: Optional[str] = None
+    neighborhood: Optional[str] = None
+    test_until: Optional[str] = None
+    description: Optional[str] = None
+    fuel_type: Optional[str] = None
+    transmission: Optional[str] = None
+    body_type: Optional[str] = None
+    hand: Optional[int] = None
+    horsepower: Optional[int] = None
+    doors: Optional[int] = None
+    seats: Optional[int] = None
+    status: Optional[str] = None
+    is_imported: Optional[bool] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    brand: Optional[str] = None
+    model: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+# Create the main router for API v1 with prefix /api/v1
+api_router = APIRouter(prefix="/api/v1", tags=["listings"])
 
 # Dependency to get DB session
 def get_db():
@@ -17,12 +48,8 @@ def get_db():
     finally:
         db.close()
 
-__all__ = ['router']
-
-# API router instance for main app to include
-api_router = router
-
-@router.get("/listings", response_model=List[CarListing])
+# Define the listings endpoints directly in the router
+@api_router.get("/listings", response_model=List[CarListingResponse], tags=["listings"])
 async def get_listings(
     db: Session = Depends(get_db),
     brand: Optional[str] = None,
@@ -40,11 +67,15 @@ async def get_listings(
     """
     query = db.query(CarListingModel)
     
+    # Join with brand and model tables to get the names
+    query = query.outerjoin(CarBrand, CarListingModel.brand_id == CarBrand.id)\
+                 .outerjoin(CarModel, CarListingModel.model_id == CarModel.id)
+    
     # Apply filters
     if brand:
-        query = query.join(CarBrand).filter(CarBrand.name.ilike(f"%{brand}%"))
+        query = query.filter(CarBrand.name == brand)
     if model:
-        query = query.join(CarModel).filter(CarModel.name.ilike(f"%{model}%"))
+        query = query.filter(CarModel.name == model)
     if min_price is not None:
         query = query.filter(CarListingModel.price >= min_price)
     if max_price is not None:
@@ -54,57 +85,108 @@ async def get_listings(
     if max_year is not None:
         query = query.filter(CarListingModel.year <= max_year)
     if location:
-        query = query.filter(CarListingModel.location.ilike(f"%{location}%"))
+        query = query.filter(
+            (CarListingModel.city.ilike(f"%{location}%")) | 
+            (CarListingModel.neighborhood.ilike(f"%{location}%"))
+        )
     
-    # Pagination
-    skip = (page - 1) * limit
-    listings = query.offset(skip).limit(limit).all()
+    # Apply pagination
+    offset = (page - 1) * limit
+    listings = query.offset(offset).limit(limit).all()
     
-    # Convert SQLAlchemy models to Pydantic models
     return [
-        CarListing(
+        CarListingResponse(
             id=listing.id,
-            yad2_id=listing.yad2_id,
             title=listing.title,
-            description=listing.description,
-            price=listing.price,
+            price=float(listing.price) if listing.price else None,
             year=listing.year,
             mileage=listing.mileage,
+            engine_volume=listing.engine_volume,
+            color=listing.color,
+            city=listing.city,
+            neighborhood=listing.neighborhood,
+            test_until=listing.test_until.isoformat() if listing.test_until else None,
+            description=listing.description,
             fuel_type=listing.fuel_type,
             transmission=listing.transmission,
             body_type=listing.body_type,
-            color=listing.color,
-            status=listing.status,
-            brand_id=listing.brand_id,
-            model_id=listing.model_id,
-            created_at=listing.created_at,
-            updated_at=listing.updated_at,
-            last_scraped_at=listing.last_scraped_at,
-            brand=CarBrandSchema(
-                id=listing.brand.id,
-                name=listing.brand.name,
-                normalized_name=listing.brand.normalized_name
-            ) if listing.brand else None,
-            model=CarModelSchema(
-                id=listing.model.id,
-                name=listing.model.name,
-                normalized_name=listing.model.normalized_name,
-                brand_id=listing.model.brand_id
-            ) if listing.model else None
+            hand=listing.hand,
+            horsepower=listing.horsepower,
+            doors=listing.doors,
+            seats=listing.seats,
+            status=listing.status.value if listing.status else None,
+            is_imported=listing.is_imported,
+            created_at=listing.created_at.isoformat() if listing.created_at else None,
+            updated_at=listing.updated_at.isoformat() if listing.updated_at else None,
+            brand=listing.brand.name if listing.brand else None,
+            model=listing.model.name if listing.model else None
         )
         for listing in listings
     ]
 
-@router.get("/brands", response_model=List[Dict[str, str]])
+# Include the scraper router
+api_router.include_router(scraper_v2.router, prefix="", tags=["scraper"])
+
+__all__ = ['api_router']
+
+@api_router.get("/listings/{listing_id}", response_model=CarListingResponse, tags=["listings"])
+async def get_listing(
+    listing_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get a single car listing by ID"""
+    listing = db.query(CarListingModel)\
+                .outerjoin(CarBrand, CarListingModel.brand_id == CarBrand.id)\
+                .outerjoin(CarModel, CarListingModel.model_id == CarModel.id)\
+                .filter(CarListingModel.id == listing_id)\
+                .first()
+    
+    if not listing:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Listing with ID {listing_id} not found"
+        )
+    
+    # Convert SQLAlchemy model to Pydantic model
+    return CarListingResponse(
+        id=listing.id,
+        title=listing.title,
+        price=float(listing.price) if listing.price else None,
+        year=listing.year,
+        mileage=listing.mileage,
+        engine_volume=listing.engine_volume,
+        color=listing.color,
+        city=listing.city,
+        neighborhood=listing.neighborhood,
+        test_until=listing.test_until.isoformat() if listing.test_until else None,
+        description=listing.description,
+        fuel_type=listing.fuel_type,
+        transmission=listing.transmission,
+        body_type=listing.body_type,
+        hand=listing.hand,
+        horsepower=listing.horsepower,
+        doors=listing.doors,
+        seats=listing.seats,
+        status=listing.status.value if listing.status else None,
+        is_imported=listing.is_imported,
+        created_at=listing.created_at.isoformat() if listing.created_at else None,
+        updated_at=listing.updated_at.isoformat() if listing.updated_at else None,
+        brand=listing.brand.name if listing.brand else None,
+        model=listing.model.name if listing.model else None
+    )
+
+@api_router.get("/brands", response_model=List[Dict[str, str]], tags=["listings"])
 async def get_brands(db: Session = Depends(get_db)):
     """Get list of available car brands"""
     brands = db.query(CarBrand).distinct().all()
-    return [{"name": brand.name} for brand in brands if brand.name]
+    return [{"id": str(brand.id), "name": brand.name} for brand in brands]
 
-@router.get("/models/{brand}", response_model=List[Dict[str, str]])
+@api_router.get("/models/{brand}", response_model=List[Dict[str, str]], tags=["listings"])
 async def get_models(brand: str, db: Session = Depends(get_db)):
     """Get list of models for a specific brand"""
     models = db.query(CarModel).join(CarBrand).filter(
-        CarBrand.name.ilike(f"%{brand}%")
-    ).distinct().all()
-    return [{"name": model.name} for model in models if model.name]
+        CarBrand.name == brand
+    ).all()
+    return [{"id": str(model.id), "name": model.name} for model in models]
+
+__all__ = ['api_router']

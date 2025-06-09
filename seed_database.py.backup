@@ -1,0 +1,464 @@
+#!/usr/bin/env python3
+"""
+Script to seed the database with car listings from Yad2 by parsing embedded JSON data.
+"""
+import json
+import logging
+import re
+from datetime import datetime
+from typing import List, Dict, Optional, Any
+from urllib.parse import urljoin
+import requests
+from bs4 import BeautifulSoup
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('seed_database.log')
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# Import database models and session after logging is configured
+from app.db.session import SessionLocal
+from app.db.models.car import CarListing, CarBrand, CarModel
+
+# Base URL for Yad2
+BASE_URL = 'https://www.yad2.co.il/vehicles/cars'
+
+# Headers to mimic a browser
+HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9,he;q=0.8',
+    'Referer': 'https://www.yad2.co.il/',
+    'DNT': '1',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+}
+
+def fetch_listings(page: int = 1, limit: int = 50) -> List[Dict]:
+    """Fetch car listings by extracting data from the JSON embedded in the page."""
+    try:
+        # Set up the session
+        session = requests.Session()
+        
+        # Set up query parameters
+        params = {
+            'category': '5',  # Cars category
+            'subcategory': '101',  # Private cars
+            'area': '1',  # All areas
+            'price': '0-0',  # All prices
+            'page': str(page),
+        }
+        
+        logger.info(f"Fetching page {page} with up to {limit} listings...")
+        
+        # Make the request
+        response = session.get(
+            BASE_URL,
+            headers=HEADERS,
+            params=params,
+            timeout=30
+        )
+        
+        logger.debug(f"Response status: {response.status_code}")
+        response.raise_for_status()
+        
+        # Save the raw HTML for debugging
+        with open('yad2_search_results.html', 'w', encoding='utf-8') as f:
+            f.write(response.text)
+        logger.info("Saved search results HTML to 'yad2_search_results.html'")
+        
+        # Parse the HTML with BeautifulSoup
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Find the script tag containing the JSON data
+        script_tag = soup.find('script', id='__NEXT_DATA__')
+        if not script_tag:
+            logger.error("Could not find __NEXT_DATA__ script tag")
+            return []
+            
+        # Parse the JSON data
+        try:
+            json_data = json.loads(script_tag.string)
+            
+            # Save the parsed JSON for debugging
+            with open('yad2_parsed_data.json', 'w', encoding='utf-8') as f:
+                json.dump(json_data, f, ensure_ascii=False, indent=2)
+            logger.info("Saved parsed JSON data to 'yad2_parsed_data.json'")
+            
+            # Extract feed items from the JSON structure
+            def find_feed_items(data: Any) -> List[Dict]:
+                """Recursively search for feed items in the JSON structure."""
+                items = []
+                
+                # Check if this is a dictionary
+                if isinstance(data, dict):
+                    # Look for the 'feed' key that contains 'feed_items'
+                    if 'feed' in data and 'feed_items' in data['feed']:
+                        return data['feed']['feed_items']
+                    # Look for the 'feedItems' key
+                    elif 'feedItems' in data:
+                        return data['feedItems']
+                    # Look for the 'private' key which contains private listings
+                    elif 'private' in data and isinstance(data['private'], list):
+                        return data['private']
+                    # Look for the 'commercial' key which contains dealer listings
+                    elif 'commercial' in data and isinstance(data['commercial'], list):
+                        return data['commercial']
+                    # Recursively search through dictionary values
+                    for value in data.values():
+                        result = find_feed_items(value)
+                        if result:
+                            items.extend(result)
+                # If it's a list, search through each item
+                elif isinstance(data, list):
+                    for item in data:
+                        result = find_feed_items(item)
+                        if result:
+                            items.extend(result)
+                
+                return items if items else []
+            
+            feed_items = find_feed_items(json_data)
+            
+            if not feed_items:
+                logger.warning("No feed items found in the JSON data")
+                # Try to find listings in alternative locations
+                if 'props' in json_data and 'pageProps' in json_data['props']:
+                    page_props = json_data['props']['pageProps']
+                    if 'dehydratedState' in page_props:
+                        dehydrated_state = page_props['dehydratedState']
+                        if 'queries' in dehydrated_state:
+                            for query in dehydrated_state['queries']:
+                                if 'state' in query and 'data' in query['state']:
+                                    data = query['state']['data']
+                                    feed_items = find_feed_items(data)
+                                    if feed_items:
+                                        break
+                
+                if not feed_items:
+                    logger.warning("Could not find listings in alternative locations")
+                    return []
+            
+            logger.info(f"Found {len(feed_items)} listings in the JSON data")
+            return feed_items[:limit]  # Return only the requested number of items
+            
+        except json.JSONDecodeError as je:
+            logger.error(f"Failed to parse JSON data: {str(je)}")
+            return []
+            
+    except requests.exceptions.RequestException as re:
+        logger.error(f"Request failed: {str(re)}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+        return []
+
+def normalize_listing(listing: Dict) -> Optional[Dict]:
+    """Normalize listing data to match our database schema."""
+    try:
+        # Extract basic information
+        listing_id = listing.get('adNumber') or listing.get('token') or listing.get('id')
+        if not listing_id:
+            logger.warning("Could not determine ID for listing")
+            return None
+        
+        # Build title from manufacturer, model, and submodel
+        title_parts = []
+        manufacturer = ''
+        model = ''
+        sub_model = ''
+        
+        if 'manufacturer' in listing and 'text' in listing['manufacturer']:
+            manufacturer = listing['manufacturer']['text']
+            title_parts.append(manufacturer)
+            
+        if 'model' in listing and 'text' in listing['model']:
+            model = listing['model']['text']
+            title_parts.append(model)
+            
+        if 'subModel' in listing and 'text' in listing['subModel']:
+            sub_model = listing['subModel']['text']
+            title_parts.append(sub_model)
+        
+        title = ' '.join(title_parts) if title_parts else 'No title'
+        
+        # Format the price
+        price = None
+        if 'price' in listing and listing['price'] is not None:
+            try:
+                price = float(str(listing['price']).replace(',', '').replace(' ', ''))
+            except (ValueError, TypeError):
+                price = None
+        
+        # Get the year
+        year = None
+        if 'vehicleDates' in listing and 'yearOfProduction' in listing['vehicleDates']:
+            try:
+                year = int(listing['vehicleDates']['yearOfProduction'])
+            except (ValueError, TypeError):
+                year = None
+        
+        # Get the mileage
+        km = None
+        if 'km' in listing and listing['km'] is not None:
+            try:
+                km = float(str(listing['km']).replace(',', '').replace(' ', '').replace('ק"מ', '').strip())
+            except (ValueError, TypeError):
+                km = None
+        
+        # Get the location
+        location_parts = []
+        if 'address' in listing:
+            if 'city' in listing['address'] and 'text' in listing['address']['city']:
+                location_parts.append(listing['address']['city']['text'])
+            if 'area' in listing['address'] and 'text' in listing['address']['area']:
+                location_parts.append(listing['address']['area']['text'])
+        location = ', '.join(location_parts) if location_parts else ''
+        
+        # Get the link
+        link = f"https://www.yad2.co.il/item/{listing_id}" if listing_id else ''
+        
+        # Get the image URL
+        image_url = ''
+        if 'metaData' in listing and 'coverImage' in listing['metaData'] and listing['metaData']['coverImage']:
+            image_url = listing['metaData']['coverImage']
+        elif 'images' in listing and listing['images'] and isinstance(listing['images'], list) and listing['images']:
+            image_url = listing['images'][0]
+        
+        # Get additional details
+        color = listing.get('color', {}).get('text', '') if isinstance(listing.get('color'), dict) else ''
+        hand = listing.get('hand', {}).get('text', '') if isinstance(listing.get('hand'), dict) else ''
+        gear_box = listing.get('gearBox', {}).get('text', '') if isinstance(listing.get('gearBox'), dict) else ''
+        
+        # Check if the car is automatic
+        is_automatic = 'אוטומט' in gear_box or 'automatic' in gear_box.lower()
+        
+        # Get engine details
+        engine_volume = listing.get('engineVolume')
+        horse_power = listing.get('horsePower')
+        
+        # Create normalized listing
+        normalized = {
+            'source': 'yad2',
+            'source_id': str(listing_id),
+            'title': title,
+            'price': price,
+            'year': year,
+            'km': km,
+            'location': location,
+            'link': link,
+            'image_url': image_url,
+            'manufacturer': manufacturer,
+            'model': model,
+            'sub_model': sub_model,
+            'color': color,
+            'hand': hand,
+            'engine_volume': engine_volume,
+            'horse_power': horse_power,
+            'gear_box': gear_box,
+            'is_automatic': is_automatic,
+            'raw_data': {k: v for k, v in listing.items() if k not in ['metaData', 'specification']}
+        }
+        
+        return normalized
+        
+    except Exception as e:
+        logger.error(f"Error normalizing listing: {str(e)}", exc_info=True)
+        return None
+
+def get_or_create_brand(db_session: Session, brand_name: str) -> CarBrand:
+    """Get an existing brand or create a new one if it doesn't exist."""
+    if not brand_name:
+        return None
+        
+    # Normalize the brand name (convert to lowercase and remove extra spaces)
+    normalized_name = ' '.join(brand_name.strip().lower().split())
+    
+    # Try to find existing brand
+    brand = db_session.query(CarBrand).filter(
+        func.lower(CarBrand.name) == normalized_name
+    ).first()
+    
+    if not brand:
+        # Create new brand
+        brand = CarBrand(
+            name=brand_name.strip(),
+            normalized_name=normalized_name
+        )
+        db_session.add(brand)
+        db_session.commit()
+        logger.debug(f"Created new brand: {brand_name}")
+    
+    return brand
+
+def get_or_create_model(db_session: Session, model_name: str, brand_id: int) -> CarModel:
+    """Get an existing model or create a new one if it doesn't exist."""
+    if not model_name or not brand_id:
+        return None
+        
+    # Normalize the model name (convert to lowercase and remove extra spaces)
+    normalized_name = ' '.join(model_name.strip().lower().split())
+    
+    # Try to find existing model for this brand
+    model = db_session.query(CarModel).filter(
+        CarModel.brand_id == brand_id,
+        func.lower(CarModel.name) == normalized_name
+    ).first()
+    
+    if not model:
+        # Create new model
+        model = CarModel(
+            name=model_name.strip(),
+            normalized_name=normalized_name,
+            brand_id=brand_id
+        )
+        db_session.add(model)
+        db_session.commit()
+        logger.debug(f"Created new model: {model_name} for brand_id: {brand_id}")
+    
+    return model
+
+def extract_brand_and_model(title: str) -> tuple[str, str]:
+    """Extract brand and model from the title."""
+    if not title:
+        return None, None
+    
+    # Split the title into words
+    words = title.split()
+    
+    # Simple heuristic: first word is usually the brand, second is the model
+    if len(words) >= 2:
+        return words[0], words[1]
+    elif len(words) == 1:
+        return words[0], None
+    return None, None
+
+def save_listing_to_db(db_session: Session, listing_data: Dict) -> bool:
+    """Save a single listing to the database."""
+    try:
+        if not listing_data or 'source_id' not in listing_data:
+            logger.warning("Invalid listing data, skipping")
+            return False
+            
+        # Extract brand and model from title if not provided
+        title = listing_data.get('title', '')
+        brand_name = listing_data.get('brand')
+        model_name = listing_data.get('model')
+        
+        if not brand_name or not model_name:
+            extracted_brand, extracted_model = extract_brand_and_model(title)
+            brand_name = brand_name or extracted_brand
+            model_name = model_name or extracted_model
+        
+        # Get or create brand and model
+        brand = get_or_create_brand(db_session, brand_name) if brand_name else None
+        
+        # Only try to get/create model if we have a valid brand
+        model = None
+        if brand and model_name:
+            model = get_or_create_model(db_session, model_name, brand.id)
+        
+        if not brand or not model:
+            logger.warning(f"Skipping listing due to missing brand or model: {title}")
+            return False
+            
+        # Map the listing data to match the CarListing model
+        car_data = {
+            'yad2_id': str(listing_data['source_id']),
+            'title': title[:255],  # Ensure title is not too long
+            'description': listing_data.get('description'),
+            'price': float(listing_data.get('price', 0)),
+            'year': int(listing_data.get('year', 0)) if listing_data.get('year') else None,
+            'mileage': int(listing_data.get('km', 0)) if listing_data.get('km') else None,
+            'fuel_type': listing_data.get('fuel_type'),
+            'transmission': listing_data.get('gear_box'),
+            'body_type': listing_data.get('body_type'),
+            'color': listing_data.get('color'),
+            'brand_id': brand.id,
+            'model_id': model.id,
+            'created_at': datetime.utcnow(),
+            'updated_at': datetime.utcnow(),
+            'last_scraped_at': datetime.utcnow()
+        }
+        
+        # Remove None values to avoid overwriting existing data with None
+        car_data = {k: v for k, v in car_data.items() if v is not None}
+        
+        # Check if listing already exists by yad2_id
+        existing = db_session.query(CarListing).filter_by(
+            yad2_id=str(listing_data['source_id'])
+        ).first()
+        
+        if existing:
+            # Update existing record
+            for key, value in car_data.items():
+                if hasattr(existing, key) and key != 'id':
+                    setattr(existing, key, value)
+            existing.updated_at = datetime.utcnow()
+            logger.debug(f"Updated existing listing: {listing_data['source_id']}")
+        else:
+            # Create new record
+            car = CarListing(**car_data)
+            db_session.add(car)
+            logger.debug(f"Added new listing: {listing_data['source_id']}")
+            
+        db_session.commit()
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error saving listing to database: {str(e)}", exc_info=True)
+        db_session.rollback()
+        return False
+
+def main():
+    """Main function to fetch and save car listings."""
+    logger.info("Starting database seeding process...")
+    
+    db_session = SessionLocal()
+    
+    try:
+        page = 1
+        limit = 50
+        total_saved = 0
+        max_pages = 5  # Limit the number of pages to process for testing
+        
+        while True:
+            listings = fetch_listings(page=page, limit=limit)
+            
+            if not listings:
+                logger.info("No more listings found.")
+                break
+                
+            saved_count = 0
+            for listing in listings:
+                normalized = normalize_listing(listing)
+                if normalized and save_listing_to_db(db_session, normalized):
+                    saved_count += 1
+            
+            total_saved += saved_count
+            logger.info(f"Saved {saved_count} listings from page {page}")
+            
+            if saved_count < limit or page >= max_pages:
+                break
+                
+            page += 1
+            
+        db_session.commit()
+        logger.info(f"Database seeding completed. Total listings saved: {total_saved}")
+        
+    except Exception as e:
+        logger.error(f"An error occurred during database seeding: {str(e)}", exc_info=True)
+        db_session.rollback()
+    finally:
+        db_session.close()
+
+if __name__ == "__main__":
+    main()

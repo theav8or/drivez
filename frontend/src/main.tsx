@@ -4,14 +4,23 @@ import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import rtlPlugin from 'stylis-plugin-rtl';
+import { prefixer } from 'stylis';
 import { theme } from './theme/theme';
+import { I18nProvider } from './i18n/I18nProvider';
 import './index.css';
 import App from './App';
 
-// Create RTL cache
+// Create RTL cache for Hebrew support
 const cacheRtl = createCache({
   key: 'muirtl',
-  stylisPlugins: [],
+  stylisPlugins: [prefixer, rtlPlugin],
+  prepend: true,
+});
+
+// Create LTR cache for English
+const cacheLtr = createCache({
+  key: 'muiltl',
   prepend: true,
 });
 

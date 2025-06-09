@@ -10,12 +10,18 @@ import {
   Menu,
   MenuItem,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Select,
+  FormControl,
+  InputLabel
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
+import LanguageIcon from '@mui/icons-material/Language';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
+import { useI18n } from '../i18n/I18nProvider';
 
 const Layout: React.FC = () => {
+  const { t, language, setLanguage } = useI18n();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const location = useLocation();
   const theme = useTheme();
@@ -29,12 +35,21 @@ const Layout: React.FC = () => {
     setAnchorEl(null);
   };
 
+  const handleLanguageChange = (event: any) => {
+    setLanguage(event.target.value);
+  };
+
   const menuItems = [
-    { name: 'Home', path: '/' },
-    { name: 'Listings', path: '/listings' },
-    { name: 'Brands', path: '/brands' },
-    { name: 'About', path: '/about' },
-    { name: 'Contact', path: '/contact' }
+    { name: t('home'), path: '/' },
+    { name: t('listings'), path: '/listings' },
+    { name: t('brands'), path: '/brands' },
+    { name: t('about'), path: '/about' },
+    { name: t('contact'), path: '/contact' }
+  ];
+  
+  const languages = [
+    { code: 'en', name: 'English' },
+    { code: 'he', name: 'עברית' }
   ];
 
 
@@ -79,6 +94,9 @@ const Layout: React.FC = () => {
               }}
             >
               DRIVEZ
+            </Typography>
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+              {t('appTitle')}
             </Typography>
           </Box>
 
@@ -138,23 +156,53 @@ const Layout: React.FC = () => {
               </Menu>
             </>
           ) : (
-            <Box sx={{ display: 'flex', gap: 1, direction: 'rtl' }}>
-              {menuItems.map((item) => (
-                <Button
-                  key={item.name}
-                  component={RouterLink}
-                  to={item.path}
-                  variant={location.pathname === item.path ? 'contained' : 'text'}
-                  color="primary"
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 2 }}>
+                {menuItems.map((item) => (
+                  <Button
+                    key={item.path}
+                    color="inherit"
+                    component={RouterLink}
+                    to={item.path}
+                    sx={{
+                      textDecoration: 'none',
+                      borderBottom: location.pathname === item.path ? '2px solid white' : 'none',
+                      borderRadius: 0,
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                      }
+                    }}
+                  >
+                    {item.name}
+                  </Button>
+                ))}
+              </Box>
+              <FormControl size="small" variant="standard" sx={{ minWidth: 100, color: 'white' }}>
+                <Select
+                  value={language}
+                  onChange={handleLanguageChange}
+                  inputProps={{ 'aria-label': 'Select language' }}
                   sx={{
-                    textTransform: 'none',
-                    fontWeight: location.pathname === item.path ? 600 : 400,
-                    px: 2,
+                    color: 'white',
+                    '& .MuiSelect-icon': {
+                      color: 'white'
+                    },
+                    '&:before, &:after': {
+                      borderBottomColor: 'white !important'
+                    },
+                    '&:hover:not(.Mui-disabled):before': {
+                      borderBottomColor: 'white'
+                    }
                   }}
+                  IconComponent={LanguageIcon}
                 >
-                  {item.name}
-                </Button>
-              ))}
+                  {languages.map((lang) => (
+                    <MenuItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
           )}
         </Toolbar>
