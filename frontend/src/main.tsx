@@ -1,7 +1,19 @@
 import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { CacheProvider } from '@emotion/react';
+import createCache from '@emotion/cache';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { theme } from './theme/theme';
 import './index.css';
 import App from './App';
+
+// Create RTL cache
+const cacheRtl = createCache({
+  key: 'muirtl',
+  stylisPlugins: [],
+  prepend: true,
+});
 
 // Enhanced error boundary with state management
 interface ErrorBoundaryState {
@@ -54,20 +66,20 @@ console.log('Mounting React application...');
 
 const rootElement = document.getElementById('root');
 
-if (!rootElement) {
-  console.error('Failed to find the root element');
+if (rootElement) {
+  const root = createRoot(rootElement);
+  root.render(
+    <StrictMode>
+      <CacheProvider value={cacheRtl}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </ThemeProvider>
+      </CacheProvider>
+    </StrictMode>
+  );
 } else {
-  try {
-    const root = createRoot(rootElement);
-    root.render(
-      <StrictMode>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </StrictMode>
-    );
-    console.log('React application mounted successfully');
-  } catch (error) {
-    console.error('Failed to mount React application:', error);
-  }
+  console.error('Failed to find the root element');
 }

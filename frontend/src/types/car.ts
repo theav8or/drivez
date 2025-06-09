@@ -14,6 +14,7 @@ export interface CarModel {
 export interface CarListing {
   id: number;
   model_id: number;
+  brand_id: number;
   source: string;
   source_id: string;
   title: string;
@@ -26,6 +27,14 @@ export interface CarListing {
   image?: string;
   created_at: string;
   updated_at: string;
+  last_scraped_at?: string;
+  fuel_type?: string;
+  body_type?: string;
+  transmission?: string;
+  color?: string;
+  status?: 'active' | 'sold' | 'pending' | 'inactive';
+  brand_name?: string;
+  model_name?: string;
 }
 
 export interface CarListingFilters {

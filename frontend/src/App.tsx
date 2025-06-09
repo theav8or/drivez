@@ -4,6 +4,7 @@ import { Provider } from 'react-redux';
 import { store } from './store/store';
 import Layout from './components/Layout';
 import ListingsPage from './features/listings/ListingsPage';
+import ListingDetail from './features/listings/ListingDetail';
 
 function App() {
   useEffect(() => {
@@ -18,18 +19,13 @@ function App() {
       <Provider store={store}>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={
-              <div>
-                <div>Rendering Layout...</div>
-                <Layout />
-              </div>
-            }>
-              <Route index element={
-                <div>
-                  <div>Rendering ListingsPage...</div>
-                  <ListingsPage />
-                </div>
-              } />
+            <Route path="/" element={<Layout />}>
+              <Route index element={<ListingsPage />} />
+              <Route path="listings" element={<ListingsPage />} />
+              <Route path="listing/:id" element={<ListingDetail />} />
+              <Route path="brands" element={<div>Brands Page</div>} />
+              <Route path="about" element={<div>About Page</div>} />
+              <Route path="contact" element={<div>Contact Page</div>} />
             </Route>
           </Routes>
         </BrowserRouter>

@@ -13,12 +13,13 @@ import {
   useMediaQuery
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
-import { Outlet, Link as RouterLink } from 'react-router-dom';
+import { Outlet, Link as RouterLink, useLocation } from 'react-router-dom';
 
 const Layout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const location = useLocation();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -30,15 +31,59 @@ const Layout: React.FC = () => {
 
   const menuItems = [
     { name: 'Home', path: '/' },
-    // Add more menu items as needed
-    // { name: 'Another Page', path: '/another' },
+    { name: 'Listings', path: '/listings' },
+    { name: 'Brands', path: '/brands' },
+    { name: 'About', path: '/about' },
+    { name: 'Contact', path: '/contact' }
   ];
 
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
+    <Box sx={{ 
+      flexGrow: 1,
+      direction: 'rtl',
+      textAlign: 'right',
+      '& *': {
+        fontFamily: 'Heebo, Arial, sans-serif !important',
+      },
+    }}>
+      <AppBar 
+        position="sticky" 
+        elevation={0} 
+        color="default" 
+        sx={{ 
+          borderBottom: '1px solid rgba(0, 0, 0, 0.12)', 
+          bgcolor: 'background.paper',
+          py: 1
+        }}
+      >
+        <Toolbar disableGutters sx={{ width: '100%', maxWidth: 'lg', mx: 'auto', px: 2 }}>
+          <Box 
+            component={RouterLink} 
+            to="/" 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              textDecoration: 'none',
+              mr: 2
+            }}
+          >
+            <Typography
+              variant="h6"
+              noWrap
+              component="div"
+              sx={{
+                fontWeight: 700,
+                letterSpacing: '.1rem',
+                color: 'primary.main',
+              }}
+            >
+              DRIVEZ
+            </Typography>
+          </Box>
+
+          <Box sx={{ flexGrow: 1 }} />
+          
           {isMobile ? (
             <>
               <IconButton
@@ -47,7 +92,7 @@ const Layout: React.FC = () => {
                 color="inherit"
                 aria-label="menu"
                 onClick={handleMenuOpen}
-                sx={{ mr: 2 }}
+                sx={{ color: 'text.primary' }}
               >
                 <MenuIcon />
               </IconButton>
@@ -65,6 +110,13 @@ const Layout: React.FC = () => {
                 }}
                 open={Boolean(anchorEl)}
                 onClose={handleMenuClose}
+                PaperProps={{
+                  elevation: 3,
+                  sx: {
+                    mt: 1,
+                    minWidth: 200,
+                  },
+                }}
               >
                 {menuItems.map((item) => (
                   <MenuItem 
@@ -72,6 +124,13 @@ const Layout: React.FC = () => {
                     onClick={handleMenuClose}
                     component={RouterLink}
                     to={item.path}
+                    selected={location.pathname === item.path}
+                    sx={{
+                      color: location.pathname === item.path ? 'primary.main' : 'text.primary',
+                      '&:hover': {
+                        backgroundColor: 'action.hover',
+                      },
+                    }}
                   >
                     {item.name}
                   </MenuItem>
@@ -79,31 +138,25 @@ const Layout: React.FC = () => {
               </Menu>
             </>
           ) : (
-            <Box sx={{ display: 'flex', gap: 2, flexGrow: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, direction: 'rtl' }}>
               {menuItems.map((item) => (
                 <Button
                   key={item.name}
-                  color="inherit"
                   component={RouterLink}
                   to={item.path}
+                  variant={location.pathname === item.path ? 'contained' : 'text'}
+                  color="primary"
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: location.pathname === item.path ? 600 : 400,
+                    px: 2,
+                  }}
                 >
                   {item.name}
                 </Button>
               ))}
             </Box>
           )}
-          
-          <Typography 
-            variant="h6" 
-            component="div" 
-            sx={{ 
-              flexGrow: isMobile ? 1 : 0,
-              textAlign: isMobile ? 'center' : 'right',
-              mr: isMobile ? 0 : 2
-            }}
-          >
-            Yad2 Car Scraper
-          </Typography>
         </Toolbar>
       </AppBar>
       <Container sx={{ mt: 4, mb: 4 }}>

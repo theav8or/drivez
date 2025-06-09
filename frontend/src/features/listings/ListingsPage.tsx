@@ -1,11 +1,11 @@
 import React, { useEffect, useCallback } from 'react';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import type { RootState } from '../../store';
 import {
   Box,
   Button,
   TextField,
-  Grid,
   Card,
   CardContent,
   CardMedia,
@@ -30,12 +30,13 @@ const ITEMS_PER_PAGE = 10;
 
 const ListingsPage: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { listings, loading, error, filters, total } = useAppSelector(
+  const navigate = useNavigate();
+  const { listings = [], loading, error, filters = {}, total = 0 } = useAppSelector(
     (state: RootState) => state.car
   );
   
-  const page = filters.page || 1;
-  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+  const page = filters?.page || 1;
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE) || 1;
 
   const fetchData = useCallback(() => {
     dispatch(fetchListings({ 
@@ -91,14 +92,16 @@ const ListingsPage: React.FC = () => {
               Car Listings
             </Typography>
             <Tooltip title="Refresh data">
-              <IconButton 
-                onClick={handleRefresh}
-                disabled={loading}
-                size="small"
-                sx={{ ml: 1 }}
-              >
-                <RefreshIcon />
-              </IconButton>
+              <span>
+                <IconButton 
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  size="small"
+                  sx={{ ml: 1 }}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </span>
             </Tooltip>
           </Box>
           
@@ -180,10 +183,43 @@ const ListingsPage: React.FC = () => {
       </Card>
 
       {listings.length > 0 ? (
-        <Grid container spacing={3}>
+        <Box 
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, 1fr)',
+              md: 'repeat(3, 1fr)',
+              lg: 'repeat(4, 1fr)'
+            },
+            gap: 3,
+            width: '100%'
+          }}
+        >
           {listings.map((listing: CarListing) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={listing.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box 
+              key={listing.id}
+              sx={{ 
+                display: 'flex',
+                width: '100%'
+              }}
+            >
+              <Card
+                key={listing.id}
+                component={RouterLink}
+                to={`/listing/${listing.id}`}
+                sx={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  textDecoration: 'none',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: 6,
+                  },
+                }}
+              >
                 {listing.image && (
                   <CardMedia
                     component="img"
@@ -197,21 +233,33 @@ const ListingsPage: React.FC = () => {
                     {listing.title}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Year: {listing.year}
+                    שנת ייצור: {listing.year}
                   </Typography>
                   <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
-                    ${listing.price?.toLocaleString()}
+                    {new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' }).format(listing.price)}
                   </Typography>
+                  {listing.description && (
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      mt: 1, 
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis' 
+                    }}>
+                      {listing.description}
+                    </Typography>
+                  )}
                   {listing.mileage && (
                     <Typography variant="body2" color="text.secondary">
-                      Mileage: {listing.mileage.toLocaleString()} km
+                      קילומטרז: {listing.mileage.toLocaleString('he-IL')} ק״מ
                     </Typography>
                   )}
                 </CardContent>
               </Card>
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       ) : (
         <Box textAlign="center" py={4}>
           <Typography variant="h6" color="textSecondary">
